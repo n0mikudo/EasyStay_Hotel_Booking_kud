@@ -1,0 +1,139 @@
+/**
+ * 侧边栏样式
+ *
+ * 包含：
+ * 1. 头部Logo样式
+ * 2. 菜单样式
+ * 3. 折叠按钮样式
+ * 4. 底部信息样式
+ */
+
+/* 侧边栏整体 */
+.sidebar {
+  background: #001529;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
+}
+
+/* 头部区域 */
+.sidebar-header {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background: #002140;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Logo */
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo-icon {
+  font-size: 28px;
+  flex-shrink: 0;
+}
+
+.logo-text {
+  color: #fff;
+  font-size: 18px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 折叠按钮 */
+.collapse-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 4px;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.collapse-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* 菜单样式 */
+.sidebar-menu {
+  border-right: none;
+  padding-top: 8px;
+}
+
+.sidebar-menu .ant-menu-item {
+  margin: 4px 8px;
+  border-radius: 4px;
+  height: 44px;
+  line-height: 44px;
+}
+
+.sidebar-menu .ant-menu-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.sidebar-menu .ant-menu-item-selected {
+  background: #1890ff !important;
+}
+
+.sidebar-menu .ant-menu-item-selected::after {
+  display: none;
+}
+
+/* 底部信息 */
+.sidebar-footer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 16px;
+  text-align: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: #001529;
+}
+
+.sidebar-footer .version {
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 12px;
+  margin: 0 0 4px 0;
+}
+
+.sidebar-footer .copyright {
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 11px;
+  margin: 0;
+}
+
+/* 折叠状态下的样式调整 */
+.sidebar.ant-layout-sider-collapsed .sidebar-header {
+  justify-content: center;
+  padding: 0 8px;
+}
+
+.sidebar.ant-layout-sider-collapsed .collapse-btn {
+  position: absolute;
+  right: -16px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #1890ff;
+  color: #fff;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.sidebar.ant-layout-sider-collapsed .collapse-btn:hover {
+  background: #40a9ff;
+}

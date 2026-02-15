@@ -1,0 +1,185 @@
+/**
+ * 酒店管理页面样式
+ *
+ * 包含：
+ * 1. 页面头部样式
+ * 2. 筛选栏样式
+ * 3. 表格样式
+ * 4. 编辑弹窗样式
+ * 5. 详情弹窗样式
+ */
+
+/* 页面容器 */
+.hotel-management-page {
+  padding-bottom: 24px;
+}
+
+/* 头部内容 */
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+/* 筛选栏 */
+.filter-bar {
+  margin-bottom: 16px;
+}
+
+.filter-space {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.search-input {
+  border-radius: 6px;
+}
+
+.status-select {
+  border-radius: 6px;
+}
+
+/* 表格样式 */
+.hotels-table {
+  background: #fff;
+  border-radius: 8px;
+}
+
+.hotels-table .ant-table-thead > tr > th {
+  background: #fafafa;
+  font-weight: 600;
+}
+
+/* 酒店名称 */
+.hotel-name {
+  font-weight: 500;
+  color: #262626;
+}
+
+/* 价格标签 */
+.price-tag {
+  color: #ff4d4f;
+  font-weight: 500;
+}
+
+/* 设施单元格 */
+.amenities-cell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.amenity-tag {
+  margin: 0;
+}
+
+/* 空文本 */
+.empty-text {
+  color: #bfbfbf;
+  font-size: 13px;
+}
+
+/* 时间文本 */
+.time-text {
+  color: #8c8c8c;
+  font-size: 13px;
+}
+
+/* 操作按钮 */
+.action-btns {
+  display: flex;
+  flex-wrap: nowrap;
+}
+
+/* 编辑弹窗 */
+.edit-modal .ant-modal-body {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.edit-form {
+  padding: 8px;
+}
+
+.form-actions {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid #f0f0f0;
+}
+
+/* 详情弹窗 */
+.detail-modal .ant-modal-body {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+/* 酒店详情 */
+.hotel-detail {
+  padding: 8px;
+}
+
+/* 详情图片 */
+.detail-images {
+  margin-bottom: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.detail-image {
+  border-radius: 4px;
+  object-fit: cover;
+}
+
+/* 详情描述 */
+.detail-descriptions {
+  margin-top: 16px;
+}
+
+.detail-price {
+  color: #ff4d4f;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.detail-amenities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.detail-description {
+  line-height: 1.8;
+  color: #595959;
+  white-space: pre-wrap;
+}
+
+/* 响应式适配 */
+@media (max-width: 768px) {
+  .header-content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .filter-space {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .search-input,
+  .status-select {
+    width: 100% !important;
+  }
+
+  .action-btns {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .action-btns .ant-btn {
+    padding: 0 8px;
+  }
+}

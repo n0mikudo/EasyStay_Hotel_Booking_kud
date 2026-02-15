@@ -1,0 +1,176 @@
+/**
+ * 审核列表页面样式
+ *
+ * 包含：
+ * 1. 页面头部样式
+ * 2. 搜索栏样式
+ * 3. 表格样式
+ * 4. 详情弹窗样式
+ */
+
+/* 页面容器 */
+.audit-list-page {
+  padding-bottom: 24px;
+}
+
+/* 头部内容 */
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+/* 搜索栏 */
+.search-bar {
+  margin-bottom: 16px;
+}
+
+.search-input {
+  border-radius: 6px;
+}
+
+/* 表格样式 */
+.audit-table {
+  background: #fff;
+  border-radius: 8px;
+}
+
+.audit-table .ant-table-thead > tr > th {
+  background: #fafafa;
+  font-weight: 600;
+}
+
+/* 酒店名称 */
+.hotel-name {
+  font-weight: 500;
+  color: #262626;
+}
+
+/* 价格标签 */
+.price-tag {
+  color: #ff4d4f;
+  font-weight: 500;
+}
+
+/* 设施单元格 */
+.amenities-cell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.amenity-tag {
+  margin: 0;
+}
+
+/* 空文本 */
+.empty-text {
+  color: #bfbfbf;
+  font-size: 13px;
+}
+
+/* 时间文本 */
+.time-text {
+  color: #8c8c8c;
+  font-size: 13px;
+}
+
+.time-icon {
+  margin-right: 4px;
+}
+
+/* 操作按钮 */
+.action-btns {
+  display: flex;
+  flex-wrap: nowrap;
+}
+
+.approve-btn {
+  background: #52c41a;
+  border-color: #52c41a;
+}
+
+.approve-btn:hover {
+  background: #73d13d;
+  border-color: #73d13d;
+}
+
+.reject-btn {
+  background: #ff4d4f;
+  border-color: #ff4d4f;
+}
+
+.reject-btn:hover {
+  background: #ff7875;
+  border-color: #ff7875;
+}
+
+/* 详情弹窗 */
+.detail-modal .ant-modal-body {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+/* 酒店详情 */
+.hotel-detail {
+  padding: 8px;
+}
+
+/* 详情图片 */
+.detail-images {
+  margin-bottom: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.detail-image {
+  border-radius: 4px;
+  object-fit: cover;
+}
+
+/* 详情描述 */
+.detail-descriptions {
+  margin-top: 16px;
+}
+
+.detail-price {
+  color: #ff4d4f;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.detail-amenities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.detail-description {
+  line-height: 1.8;
+  color: #595959;
+  white-space: pre-wrap;
+}
+
+/* 响应式适配 */
+@media (max-width: 768px) {
+  .header-content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .search-input {
+    width: 100% !important;
+  }
+
+  .action-btns {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .action-btns .ant-btn {
+    padding: 0 8px;
+  }
+}

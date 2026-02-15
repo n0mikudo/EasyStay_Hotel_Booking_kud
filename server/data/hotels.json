@@ -1,0 +1,22 @@
+[
+  {
+    "id": "1771089623221",
+    "name": "测试酒店",
+    "city": "北京",
+    "address": "北京市朝阳区测试路123号",
+    "description": "这是一家测试酒店，设施齐全，服务优质。",
+    "price": 299,
+    "images": [
+      "https://example.com/hotel1.jpg"
+    ],
+    "amenities": [
+      "免费WiFi",
+      "免费停车",
+      "游泳池",
+      "健身房"
+    ],
+    "status": "approved",
+    "createdAt": "2026-02-14T17:20:23.221Z",
+    "updatedAt": "2026-02-14T17:20:23.229Z"
+  }
+]

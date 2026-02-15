@@ -1,0 +1,138 @@
+/**
+ * 商户录入页面样式
+ *
+ * 包含：
+ * 1. 页面头部样式
+ * 2. 表单样式
+ * 3. 字段图标样式
+ * 4. 操作按钮样式
+ */
+
+/* 页面容器 */
+.merchant-entry-page {
+  padding-bottom: 24px;
+}
+
+/* 头部内容 */
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.example-btn {
+  border-color: #1890ff;
+  color: #1890ff;
+}
+
+.example-btn:hover {
+  background: #e6f7ff;
+  border-color: #40a9ff;
+  color: #40a9ff;
+}
+
+/* 提示信息 */
+.info-alert {
+  margin-bottom: 24px;
+  border-radius: 8px;
+}
+
+/* 表单卡片 */
+.form-card {
+  border-radius: 8px;
+}
+
+/* 表单样式 */
+.hotel-form {
+  max-width: 900px;
+}
+
+/* 字段图标 */
+.field-icon {
+  margin-right: 6px;
+  color: #1890ff;
+}
+
+/* 信息图标 */
+.info-icon {
+  margin-left: 6px;
+  color: #8c8c8c;
+  cursor: help;
+}
+
+/* 表单输入框 */
+.form-input {
+  border-radius: 6px;
+}
+
+.form-input:hover,
+.form-input:focus {
+  border-color: #40a9ff;
+}
+
+/* 表单选择器 */
+.form-select {
+  width: 100%;
+}
+
+.form-select .ant-select-selector {
+  border-radius: 6px !important;
+}
+
+/* 数字输入框 */
+.form-input-number {
+  width: 100%;
+}
+
+.form-input-number .ant-input-number {
+  border-radius: 6px;
+  width: 100%;
+}
+
+/* 文本域 */
+.form-textarea {
+  border-radius: 6px;
+}
+
+.form-textarea:hover,
+.form-textarea:focus {
+  border-color: #40a9ff;
+}
+
+/* 表单操作区 */
+.form-actions {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.submit-btn {
+  min-width: 140px;
+  border-radius: 6px;
+}
+
+/* 响应式适配 */
+@media (max-width: 768px) {
+  .header-content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .hotel-form {
+    max-width: 100%;
+  }
+
+  .form-actions {
+    .ant-space {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+    }
+
+    .ant-btn {
+      width: 100%;
+    }
+  }
+}

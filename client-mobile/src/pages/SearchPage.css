@@ -1,0 +1,417 @@
+/**
+ * 酒店查询页面（首页）样式
+ *
+ * 包含：
+ * 1. 顶部导航样式
+ * 2. Banner轮播样式
+ * 3. 核心查询区域样式
+ * 4. 日期选择器样式
+ * 5. 快捷标签样式
+ */
+
+/* 页面容器 */
+.search-page {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #f5f7fa 0%, #ffffff 100%);
+  padding-bottom: 32px;
+}
+
+/* 顶部导航 */
+.search-nav {
+  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+  --adm-nav-bar-text-color: #ffffff;
+  --adm-nav-bar-title-font-size: 18px;
+}
+
+.nav-title {
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+/* Banner区域 */
+.banner-container {
+  width: 100%;
+  height: 200px;
+  background: #f0f0f0;
+}
+
+.banner-swiper {
+  height: 100%;
+}
+
+.banner-item {
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  cursor: pointer;
+}
+
+.banner-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.3) 50%, transparent 100%);
+  padding: 20px 16px;
+  color: #ffffff;
+}
+
+.banner-content {
+  position: relative;
+}
+
+.banner-badge {
+  display: inline-block;
+  background: #ff4d4f;
+  color: #ffffff;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.banner-title {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0 0 6px 0;
+  line-height: 1.3;
+}
+
+.banner-location {
+  font-size: 13px;
+  opacity: 0.9;
+  margin: 0 0 8px 0;
+}
+
+.banner-price {
+  display: flex;
+  align-items: baseline;
+}
+
+.price-symbol {
+  font-size: 14px;
+  color: #ff4d4f;
+}
+
+.price-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #ff4d4f;
+  margin: 0 2px;
+}
+
+.price-unit {
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+/* Banner空状态 */
+.banner-empty {
+  width: 100%;
+  height: 200px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.banner-placeholder {
+  text-align: center;
+  color: #ffffff;
+}
+
+.banner-icon {
+  font-size: 48px;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.banner-text {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+/* 核心查询区域 */
+.search-form-container {
+  margin: -20px 16px 0;
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 20px 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  position: relative;
+  z-index: 10;
+}
+
+/* 表单项 */
+.form-item {
+  display: flex;
+  align-items: flex-start;
+  padding: 16px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.form-item:last-of-type {
+  border-bottom: none;
+}
+
+.form-icon {
+  width: 40px;
+  height: 40px;
+  background: #f0f5ff;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.form-icon svg {
+  width: 20px;
+  height: 20px;
+  color: #1890ff;
+}
+
+.form-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.form-label {
+  font-size: 12px;
+  color: #8c8c8c;
+  margin-bottom: 4px;
+}
+
+.form-value {
+  font-size: 16px;
+  color: #262626;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+/* 日期选择 */
+.date-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.date-block {
+  flex: 1;
+  cursor: pointer;
+  padding: 4px 0;
+}
+
+.date-separator {
+  width: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.date-separator::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: #e8e8e8;
+}
+
+.nights-badge {
+  background: #f0f5ff;
+  color: #1890ff;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  position: relative;
+  z-index: 1;
+}
+
+/* 关键字搜索 */
+.keyword-search {
+  --adm-search-background: #f5f5f5;
+  --adm-search-padding: 8px 12px;
+}
+
+/* 筛选条件行 */
+.filter-row {
+  display: flex;
+  gap: 12px;
+  padding: 16px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.filter-item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 16px;
+  background: #f5f5f5;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.filter-item:active {
+  background: #e8e8e8;
+}
+
+.filter-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 6px;
+  color: #8c8c8c;
+}
+
+.filter-text {
+  font-size: 14px;
+  color: #595959;
+}
+
+/* 快捷标签区域 */
+.quick-tags-section {
+  padding: 16px 0;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+  font-size: 14px;
+  color: #262626;
+  font-weight: 500;
+}
+
+.section-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 6px;
+  color: #1890ff;
+}
+
+.tags-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.quick-tag {
+  padding: 6px 12px;
+  background: #f5f5f5;
+  border: 1px solid transparent;
+  border-radius: 16px;
+  font-size: 13px;
+  color: #595959;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.quick-tag.active {
+  background: #e6f7ff;
+  border-color: #1890ff;
+  color: #1890ff;
+}
+
+.tag-icon {
+  font-size: 14px;
+}
+
+.tag-label {
+  font-size: 13px;
+}
+
+/* 查询按钮 */
+.search-btn {
+  margin-top: 20px;
+  height: 48px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+}
+
+.search-btn:active {
+  opacity: 0.9;
+}
+
+/* 选择器弹窗 */
+.picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.picker-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #262626;
+}
+
+.picker-list {
+  padding: 8px 0;
+}
+
+.picker-item {
+  padding: 16px;
+  font-size: 15px;
+  color: #262626;
+  cursor: pointer;
+  transition: background 0.3s;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.picker-item:last-child {
+  border-bottom: none;
+}
+
+.picker-item:active {
+  background: #f5f5f5;
+}
+
+.picker-item.active {
+  color: #1890ff;
+  background: #e6f7ff;
+}
+
+/* 响应式适配 */
+@media (max-width: 375px) {
+  .search-form-container {
+    margin: -20px 12px 0;
+    padding: 16px 12px;
+  }
+
+  .banner-container,
+  .banner-empty {
+    height: 180px;
+  }
+
+  .banner-title {
+    font-size: 18px;
+  }
+
+  .quick-tag {
+    padding: 5px 10px;
+    font-size: 12px;
+  }
+}
+
+/* 安全区域适配 */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .search-page {
+    padding-bottom: calc(32px + env(safe-area-inset-bottom));
+  }
+}
