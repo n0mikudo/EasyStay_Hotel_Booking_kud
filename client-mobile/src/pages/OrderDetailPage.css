@@ -1,0 +1,129 @@
+.order-detail-page {
+  min-height: 100vh;
+  background: var(--color-bg-page);
+  padding-bottom: calc(24px + env(safe-area-inset-bottom));
+}
+
+.order-detail-nav {
+  background: var(--gradient-primary);
+  --adm-nav-bar-text-color: #fff;
+}
+
+.order-detail-loading {
+  text-align: center;
+  padding: 60px;
+  color: var(--color-text-tertiary);
+}
+
+.order-detail-content {
+  padding: 16px;
+}
+
+.order-status-card {
+  margin-bottom: 12px;
+  border-radius: var(--radius-lg);
+}
+
+.order-status-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.order-id {
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+}
+
+.order-time {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
+
+.order-section-card {
+  margin-bottom: 12px;
+  border-radius: var(--radius-lg);
+}
+
+.order-hotel-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: 8px;
+}
+
+.order-room-info {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  margin-bottom: 12px;
+}
+
+.order-room-main {
+  display: flex;
+  align-items: center;
+}
+
+.order-room-desc {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  margin-top: 4px;
+  margin-left: 26px;
+}
+
+.order-detail-icon {
+  width: 18px;
+  height: 18px;
+  margin-right: 8px;
+  color: var(--color-text-tertiary);
+}
+
+.order-detail-actions {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border-light);
+}
+
+.view-hotel-btn {
+  margin-top: 8px;
+}
+
+.order-info-row {
+  display: flex;
+  align-items: flex-start;
+}
+
+.order-info-label {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  margin-bottom: 2px;
+}
+
+.order-info-value {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.order-price-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  padding: 8px 0;
+}
+
+.order-price-total {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0 0;
+  margin-top: 8px;
+  border-top: 1px dashed var(--color-border);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.total-amount {
+  color: var(--color-accent);
+  font-size: 20px;
+}

@@ -1,0 +1,75 @@
+.admin-message-center .page-header {
+  margin-bottom: 24px;
+}
+
+.admin-message-center .page-title {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.admin-message-center .page-subtitle {
+  font-size: 13px;
+  color: #8c8c8c;
+  margin: 0;
+}
+
+.admin-message-center .message-loading {
+  padding: 48px;
+  text-align: center;
+}
+
+.admin-message-center .message-list {
+  margin-top: 16px;
+}
+
+.admin-message-center .message-list .ant-list-item {
+  padding: 0;
+  border: none;
+}
+
+.admin-message-center .message-card {
+  margin-bottom: 12px;
+  border-radius: 8px;
+  transition: box-shadow 0.2s ease;
+}
+
+.admin-message-center .message-card-pending {
+  border-left: 4px solid #1890ff;
+  background: linear-gradient(90deg, #f0f7ff 0%, #fff 20%);
+}
+
+.admin-message-center .message-card-processed {
+  border-left: 4px solid #52c41a;
+  background: #fafafa;
+}
+
+.admin-message-center .message-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.admin-message-center .message-content {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.admin-message-center .message-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.admin-message-center .message-processed-info {
+  display: flex;
+  align-items: center;
+  color: #52c41a;
+}
+
+.admin-message-center .message-action-btn {
+  margin-top: 8px;
+}

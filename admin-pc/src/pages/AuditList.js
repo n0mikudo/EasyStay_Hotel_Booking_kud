@@ -45,6 +45,19 @@ function AuditList() {
   const [searchKeyword, setSearchKeyword] = useState('');
   const [selectedHotel, setSelectedHotel] = useState(null);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 10 });
+  const [currentUser, setCurrentUser] = useState(null);
+
+  useEffect(() => {
+    const user = localStorage.getItem('user');
+    if (user) {
+      try {
+        setCurrentUser(JSON.parse(user));
+      } catch (e) {
+        console.error('解析用户信息失败', e);
+      }
+    }
+  }, []);
 
   // 组件挂载时获取数据
   useEffect(() => {
@@ -74,7 +87,8 @@ function AuditList() {
    */
   const handleApprove = async (id) => {
     try {
-      const response = await hotelService.updateHotelStatus(id, 'approved');
+      const adminInfo = currentUser ? { id: currentUser.id, username: currentUser.name || currentUser.username } : {};
+      const response = await hotelService.updateHotelStatus(id, 'approved', adminInfo);
       if (response.data.success) {
         message.success('✅ 审核通过，酒店已上线');
         fetchHotels();
@@ -92,7 +106,8 @@ function AuditList() {
    */
   const handleReject = async (id) => {
     try {
-      const response = await hotelService.updateHotelStatus(id, 'rejected');
+      const adminInfo = currentUser ? { id: currentUser.id, username: currentUser.name || currentUser.username } : {};
+      const response = await hotelService.updateHotelStatus(id, 'rejected', adminInfo);
       if (response.data.success) {
         message.success('❌ 已拒绝该酒店');
         fetchHotels();
@@ -297,10 +312,13 @@ function AuditList() {
           rowKey="id"
           loading={loading}
           pagination={{
-            pageSize: 10,
+            current: pagination.current,
+            pageSize: pagination.pageSize,
+            pageSizeOptions: ['10', '20', '50', '100'],
             showSizeChanger: true,
             showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 条记录`
+            showTotal: (total) => `共 ${total} 条记录`,
+            onChange: (page, pageSize) => setPagination({ current: page, pageSize })
           }}
           scroll={{ x: 1200 }}
           locale={{

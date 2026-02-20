@@ -1,0 +1,37 @@
+.cascading-date-picker {
+  background: #fff;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.cascading-date-picker .picker-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.cascading-date-picker .picker-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #262626;
+}
+
+.cascading-date-picker .picker-cancel,
+.cascading-date-picker .picker-confirm {
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.cascading-date-picker .picker-cancel {
+  color: #8c8c8c;
+}
+
+.cascading-date-picker .picker-confirm {
+  color: var(--color-primary, #0D6EFD);
+  font-weight: 500;
+}
+
+.cascading-date-picker .cascading-picker {
+  --item-height: 44px;
+}

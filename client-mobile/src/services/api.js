@@ -86,7 +86,7 @@ api.interceptors.response.use(
 export const hotelService = {
   /**
    * 获取酒店列表
-   * @param {Object} params - 查询参数
+   * @param {Object} params - 查询参数（默认 status: 'approved' 仅展示已上线酒店）
    * @returns {Promise} 请求Promise
    */
   getHotels: (params) => api.get('/hotels', { params }),
@@ -96,7 +96,49 @@ export const hotelService = {
    * @param {string} id - 酒店ID
    * @returns {Promise} 请求Promise
    */
-  getHotelById: (id) => api.get(`/hotels/${id}`)
+  getHotelById: (id) => api.get(`/hotels/${id}`),
+
+  getHotTags: (limit = 8) => api.get('/hotels/hot-tags', { params: { limit } })
+};
+
+/**
+ * 地理服务（逆地理编码，优先百度地图）
+ */
+export const geoService = {
+  reverseGeocode: (lat, lng) => api.get('/geo/reverse', { params: { lat, lng } })
+};
+
+/**
+ * 预订服务API
+ */
+export const bookingService = {
+  /**
+   * 创建预订
+   * @param {Object} data - 预订数据
+   * @returns {Promise} 请求Promise
+   */
+  createBooking: (data) => api.post('/bookings', data),
+
+  /**
+   * 获取预订列表
+   * @param {Object} params - 查询参数
+   * @returns {Promise} 请求Promise
+   */
+  getBookings: (params) => api.get('/bookings', { params }),
+
+  /**
+   * 获取单个订单详情
+   * @param {string} id - 订单ID
+   * @returns {Promise} 请求Promise
+   */
+  getBookingById: (id) => api.get(`/bookings/${id}`),
+
+  /**
+   * 取消订单
+   * @param {string} id - 订单ID
+   * @returns {Promise} 请求Promise
+   */
+  cancelBooking: (id) => api.patch(`/bookings/${id}/cancel`)
 };
 
 export default api;

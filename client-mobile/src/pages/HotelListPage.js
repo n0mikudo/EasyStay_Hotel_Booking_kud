@@ -10,20 +10,17 @@
  * @component
  */
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   List,
   Card,
-  Image,
   Tag,
   Empty,
   Toast,
   NavBar,
-  InfiniteScroll,
   Popup,
   Button,
-  DatePicker,
   SearchBar
 } from 'antd-mobile';
 import {
@@ -33,6 +30,9 @@ import {
   RightOutline
 } from 'antd-mobile-icons';
 import { hotelService } from '../services/api';
+import CityPicker from '../components/CityPicker';
+import LazyImage from '../components/LazyImage';
+import CascadingDatePicker from '../components/CascadingDatePicker';
 import './HotelListPage.css';
 
 function HotelListPage() {
@@ -50,9 +50,6 @@ function HotelListPage() {
   );
   const [starRating, setStarRating] = useState(searchParams.get('star') || '');
   const [priceRange, setPriceRange] = useState(searchParams.get('price') || '');
-  const [selectedTags, setSelectedTags] = useState(
-    searchParams.get('tags') ? searchParams.get('tags').split(',') : []
-  );
 
   // 酒店列表状态
   const [hotels, setHotels] = useState([]);
@@ -64,6 +61,7 @@ function HotelListPage() {
   // UI状态
   const [filterVisible, setFilterVisible] = useState(false);
   const [datePickerVisible, setDatePickerVisible] = useState(false);
+  const [cityPickerVisible, setCityPickerVisible] = useState(false);
   const [dateType, setDateType] = useState('checkIn');
 
   // 筛选选项
@@ -72,7 +70,8 @@ function HotelListPage() {
     { label: '五星级', value: '5' },
     { label: '四星级', value: '4' },
     { label: '三星级', value: '3' },
-    { label: '二星级及以下', value: '2' },
+    { label: '二星级', value: '2' },
+    { label: '经济型', value: '1' },
   ];
 
   const priceOptions = [
@@ -92,35 +91,79 @@ function HotelListPage() {
 
   const [sortBy, setSortBy] = useState('default');
 
-  // 初始化加载
+  // 筛选弹窗内的最新值（ref 同步更新，解决点击确定时 state 未 flush 导致需点两次的问题）
+  const filterValuesRef = useRef({ starRating: '', priceRange: '' });
+
+  // 弹窗打开时同步 ref，选项点击时也会同步
+  useEffect(() => {
+    if (filterVisible) {
+      filterValuesRef.current = { starRating, priceRange };
+    }
+  }, [filterVisible, starRating, priceRange]);
+
+  // 当URL参数变化时同步状态
+  useEffect(() => {
+    setKeyword(searchParams.get('keyword') || '');
+    setCity(searchParams.get('city') || '');
+    const checkIn = searchParams.get('checkIn');
+    const checkOut = searchParams.get('checkOut');
+    if (checkIn) setCheckInDate(new Date(checkIn));
+    if (checkOut) setCheckOutDate(new Date(checkOut));
+    setStarRating(searchParams.get('star') || '');
+    setPriceRange(searchParams.get('price') || '');
+  }, [searchParams]);
+
+  // 进入页面或搜索条件变化时，滚动到顶部（固定在上方界面，避免停留在下方）
+  useEffect(() => {
+    const scrollToTop = () => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    };
+    scrollToTop();
+    requestAnimationFrame(scrollToTop);
+  }, [searchParams.toString()]);
+
+  // 仅当 URL 参数变化时加载（排序由点击直接触发 loadHotels，不依赖此 effect）
   useEffect(() => {
     loadHotels(true);
-  }, [searchParams]);
+  }, [searchParams.toString()]);
 
   /**
    * 加载酒店列表
    * @param {boolean} reset - 是否重置列表
+   * @param {Object} overrides - 显式覆盖参数，解决 React 异步状态导致的「需点两次」问题
+   * @param {string} overrides.sort - 排序方式
+   * @param {Object} overrides.filters - 筛选条件 { keyword, city, star, price, tags }
    */
-  const loadHotels = async (reset = false) => {
-    if (loading) return;
+  const loadHotels = async (reset = false, overrides = {}) => {
+    // 用户主动点击（排序/筛选）时，即使 loading 中也执行，避免需点两次
+    const isUserClick = reset && (overrides.sort !== undefined || overrides.filters);
+    if (loading && !isUserClick) return;
 
     try {
       setLoading(true);
       const currentPage = reset ? 1 : page;
 
+      // 优先使用 overrides 中的值（点击时立即生效），否则从 state/searchParams 读取
+      const filters = overrides.filters || {};
+      const kw = filters.keyword !== undefined ? filters.keyword : (searchParams.get('keyword') || keyword);
+      const c = filters.city !== undefined ? filters.city : (searchParams.get('city') || city);
+      const star = filters.star !== undefined ? filters.star : (searchParams.get('star') || starRating);
+      const price = filters.price !== undefined ? filters.price : (searchParams.get('price') || priceRange);
+      const sort = overrides.sort !== undefined ? overrides.sort : sortBy;
+
       const params = {
         status: 'approved',
         page: currentPage,
         limit: 10,
-        sort: sortBy
+        sort
       };
 
-      // 添加筛选条件
-      if (keyword) params.keyword = keyword;
-      if (city) params.city = city;
-      if (starRating) params.star = starRating;
-      if (priceRange) params.price = priceRange;
-      if (selectedTags.length > 0) params.tags = selectedTags.join(',');
+      if (kw) params.keyword = kw;
+      if (c) params.city = c;
+      if (star) params.star = star;
+      if (price) params.price = price;
 
       const response = await hotelService.getHotels(params);
 
@@ -149,12 +192,12 @@ function HotelListPage() {
   };
 
   /**
-   * 无限滚动加载更多
+   * 手动点击加载更多
    */
-  const loadMore = useCallback(async () => {
+  const handleLoadMore = () => {
     if (!hasMore || loading) return;
-    await loadHotels(false);
-  }, [hasMore, loading, page]);
+    loadHotels(false);
+  };
 
   /**
    * 格式化日期显示
@@ -201,22 +244,27 @@ function HotelListPage() {
   };
 
   /**
-   * 应用筛选条件
+   * 应用筛选条件 - 从 ref 读取最新值，确保首次点击即生效（解决 React 异步 state 导致需点两次）
    */
   const applyFilters = () => {
+    const { starRating: star, priceRange: price } = filterValuesRef.current;
     const params = new URLSearchParams();
+    const checkInStr = checkInDate?.toISOString?.()?.split('T')[0];
+    const checkOutStr = checkOutDate?.toISOString?.()?.split('T')[0];
 
     if (keyword) params.append('keyword', keyword);
     if (city) params.append('city', city);
-    if (checkInDate) params.append('checkIn', checkInDate.toISOString().split('T')[0]);
-    if (checkOutDate) params.append('checkOut', checkOutDate.toISOString().split('T')[0]);
-    if (starRating) params.append('star', starRating);
-    if (priceRange) params.append('price', priceRange);
-    if (selectedTags.length > 0) params.append('tags', selectedTags.join(','));
+    if (checkInStr) params.append('checkIn', checkInStr);
+    if (checkOutStr) params.append('checkOut', checkOutStr);
+    if (star) params.append('star', star);
+    if (price) params.append('price', price);
 
     setSearchParams(params);
     setFilterVisible(false);
-    loadHotels(true);
+
+    loadHotels(true, {
+      filters: { keyword, city, star, price }
+    });
   };
 
   /**
@@ -240,15 +288,14 @@ function HotelListPage() {
         onClick={() => handleHotelClick(hotel)}
       >
         <div className="hotel-card-content">
-          {/* 左侧图片 */}
+          {/* 左侧图片 - 懒加载 */}
           <div className="hotel-image-wrapper">
             {hotel.images && hotel.images.length > 0 ? (
-              <Image
+              <LazyImage
                 src={hotel.images[0]}
                 alt={hotel.name}
-                fit="cover"
                 className="hotel-image"
-                placeholder={<div className="image-placeholder">加载中...</div>}
+                fit="cover"
               />
             ) : (
               <div className="hotel-image-placeholder">
@@ -310,7 +357,7 @@ function HotelListPage() {
       {/* 顶部导航栏 */}
       <NavBar
         className="list-nav"
-        onBack={() => navigate('/')}
+        back={null}
         right={
           <div className="nav-right" onClick={() => setFilterVisible(true)}>
             <FilterOutline className="filter-icon" />
@@ -319,7 +366,7 @@ function HotelListPage() {
         }
       >
         <div className="nav-content">
-          <div className="nav-city" onClick={() => Toast.show({ content: '城市选择功能开发中', position: 'center' })}>
+          <div className="nav-city" onClick={() => setCityPickerVisible(true)}>
             {city || '全部城市'}
             <RightOutline className="city-arrow" />
           </div>
@@ -343,15 +390,16 @@ function HotelListPage() {
         />
       </div>
 
-      {/* 排序选项 */}
+      {/* 排序选项 - 传入新值避免异步状态导致需点两次 */}
       <div className="sort-section">
         {sortOptions.map((option) => (
           <div
             key={option.value}
             className={`sort-item ${sortBy === option.value ? 'active' : ''}`}
             onClick={() => {
-              setSortBy(option.value);
-              loadHotels(true);
+              const newSort = option.value;
+              setSortBy(newSort);
+              loadHotels(true, { sort: newSort });
             }}
           >
             {option.label}
@@ -368,13 +416,25 @@ function HotelListPage() {
           />
         ) : (
           <>
-            <List className="hotel-list">
+            <List className="hotel-list" style={{ '--border-inner': 'none' }}>
               {hotels.map(renderHotelCard)}
             </List>
-            <InfiniteScroll
-              loadMore={loadMore}
-              hasMore={hasMore}
-            />
+            {hasMore ? (
+              <div className="load-more-wrap">
+                <Button
+                  block
+                  color="primary"
+                  fill="outline"
+                  loading={loading}
+                  onClick={handleLoadMore}
+                  className="load-more-btn"
+                >
+                  {loading ? '加载中...' : '加载更多'}
+                </Button>
+              </div>
+            ) : hotels.length > 0 ? (
+              <div className="load-more-tip">已加载全部</div>
+            ) : null}
           </>
         )}
       </div>
@@ -408,7 +468,11 @@ function HotelListPage() {
                   <div
                     key={option.value}
                     className={`filter-option ${starRating === option.value ? 'active' : ''}`}
-                    onClick={() => setStarRating(option.value)}
+                    onClick={() => {
+                      const v = option.value;
+                      setStarRating(v);
+                      filterValuesRef.current.starRating = v;
+                    }}
                   >
                     {option.label}
                   </div>
@@ -424,13 +488,18 @@ function HotelListPage() {
                   <div
                     key={option.value}
                     className={`filter-option ${priceRange === option.value ? 'active' : ''}`}
-                    onClick={() => setPriceRange(option.value)}
+                    onClick={() => {
+                      const v = option.value;
+                      setPriceRange(v);
+                      filterValuesRef.current.priceRange = v;
+                    }}
                   >
                     {option.label}
                   </div>
                 ))}
               </div>
             </div>
+
           </div>
 
           <div className="filter-footer">
@@ -439,6 +508,7 @@ function HotelListPage() {
               onClick={() => {
                 setStarRating('');
                 setPriceRange('');
+                filterValuesRef.current = { starRating: '', priceRange: '' };
               }}
             >
               重置
@@ -454,16 +524,12 @@ function HotelListPage() {
         </div>
       </Popup>
 
-      {/* 日期选择器 */}
+      {/* 日期选择器 - 级联年月日 */}
       <Popup
         visible={datePickerVisible}
         onMaskClick={() => setDatePickerVisible(false)}
-        bodyStyle={{ height: '50vh' }}
+        bodyStyle={{ height: '50vh', borderTopLeftRadius: 12, borderTopRightRadius: 12 }}
       >
-        <div className="picker-header">
-          <span className="picker-title">选择日期</span>
-          <Button onClick={() => setDatePickerVisible(false)}>完成</Button>
-        </div>
         <div className="date-picker-content">
           <div className="date-type-selector">
             <Button
@@ -479,13 +545,34 @@ function HotelListPage() {
               离店: {formatDate(checkOutDate)}
             </Button>
           </div>
-          <DatePicker
+          <CascadingDatePicker
+            embedded
+            visible={datePickerVisible}
             value={dateType === 'checkIn' ? checkInDate : checkOutDate}
             onConfirm={handleDateConfirm}
-            min={new Date()}
+            onClose={() => setDatePickerVisible(false)}
+            min={dateType === 'checkIn' ? new Date() : (checkInDate ? new Date(checkInDate.getTime() + 86400000) : new Date())}
+            title={dateType === 'checkIn' ? '选择入住日期' : '选择离店日期'}
           />
         </div>
       </Popup>
+
+      {/* 城市选择器 */}
+      <CityPicker
+        visible={cityPickerVisible}
+        onClose={() => setCityPickerVisible(false)}
+        value={city}
+        onSelect={(c) => {
+          setCity(c);
+          setSearchParams(prev => {
+            const p = new URLSearchParams(prev.toString());
+            if (c) p.set('city', c); else p.delete('city');
+            return p;
+          });
+          setCityPickerVisible(false);
+          loadHotels(true);
+        }}
+      />
     </div>
   );
 }

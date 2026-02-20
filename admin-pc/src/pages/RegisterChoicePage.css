@@ -1,0 +1,74 @@
+.register-choice-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.register-choice-container {
+  width: 100%;
+  max-width: 420px;
+}
+
+.register-choice-card {
+  border-radius: 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+}
+
+.register-choice-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.register-choice-header h1 {
+  font-size: 24px;
+  margin: 0 0 8px 0;
+  color: #262626;
+}
+
+.register-choice-header p {
+  font-size: 14px;
+  color: #8c8c8c;
+  margin: 0;
+}
+
+.register-choice-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.choice-btn {
+  height: 48px;
+  font-size: 16px;
+  border-radius: 8px;
+}
+
+.merchant-btn {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  border: none;
+}
+
+.admin-btn {
+  border-color: #d9d9d9;
+  color: #595959;
+}
+
+.choice-desc {
+  font-size: 12px;
+  color: #8c8c8c;
+  margin: -16px 0 0 0;
+  text-align: center;
+}
+
+.register-choice-footer {
+  margin-top: 24px;
+  text-align: center;
+}
+
+.back-link {
+  color: #6366f1;
+  font-size: 14px;
+}

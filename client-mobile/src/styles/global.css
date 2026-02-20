@@ -1,0 +1,53 @@
+/**
+ * 易宿移动端 - 全局样式
+ */
+
+@import './variables.css';
+
+/* 基础重置 */
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-text);
+  background: var(--color-bg-page);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* antd-mobile 主题覆盖 */
+.adm-button-primary {
+  --background-color: var(--color-primary);
+  --border-color: var(--color-primary);
+}
+
+.adm-tag {
+  --border-radius: var(--radius-full);
+}
+
+.adm-nav-bar {
+  --height: 48px;
+  --border-bottom: 1px solid var(--color-border-light);
+}
+
+/* 通用工具类 */
+.text-primary { color: var(--color-primary); }
+.text-accent { color: var(--color-accent); }
+.text-secondary { color: var(--color-text-secondary); }
+.text-tertiary { color: var(--color-text-tertiary); }
+
+.font-medium { font-weight: var(--font-weight-medium); }
+.font-semibold { font-weight: var(--font-weight-semibold); }
+.font-bold { font-weight: var(--font-weight-bold); }

@@ -11,7 +11,7 @@
  */
 
 import React, { useState } from 'react';
-import { Layout, Menu } from 'antd';
+import { Layout, Menu, Button, message } from 'antd';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   DashboardOutlined,
@@ -19,11 +19,26 @@ import {
   AuditOutlined,
   HomeOutlined,
   MenuFoldOutlined,
-  MenuUnfoldOutlined
+  MenuUnfoldOutlined,
+  LogoutOutlined,
+  BarChartOutlined,
+  SettingOutlined,
+  UnorderedListOutlined,
+  MessageOutlined,
+  UserOutlined
 } from '@ant-design/icons';
 import './Sidebar.css';
 
 const { Sider } = Layout;
+
+/**
+ * 获取当前登录用户
+ * @returns {Object|null} 用户信息
+ */
+const getCurrentUser = () => {
+  const userStr = localStorage.getItem('user');
+  return userStr ? JSON.parse(userStr) : null;
+};
 
 /**
  * 侧边栏组件
@@ -33,33 +48,88 @@ function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
+  const user = getCurrentUser();
+  const role = user?.role || 'merchant'; // 默认商户角色
 
   /**
    * 菜单项配置
-   * 定义所有可用的导航项
+   * 根据用户角色定义可用的导航项
    */
-  const menuItems = [
-    {
-      key: '/dashboard',
-      icon: <DashboardOutlined />,
-      label: '数据看板'
-    },
-    {
-      key: '/merchant-entry',
-      icon: <PlusOutlined />,
-      label: '商户录入'
-    },
-    {
-      key: '/audit',
-      icon: <AuditOutlined />,
-      label: '审核管理'
-    },
-    {
-      key: '/hotels',
-      icon: <HomeOutlined />,
-      label: '酒店管理'
+  const getMenuItems = () => {
+    const basePath = role === 'admin' ? '/admin' : '/merchant';
+    
+    if (role === 'admin') {
+      // 管理员菜单
+      return [
+        {
+          key: `${basePath}/dashboard`,
+          icon: <DashboardOutlined />,
+          label: '数据看板'
+        },
+        {
+          key: `${basePath}/audit`,
+          icon: <AuditOutlined />,
+          label: '审核管理'
+        },
+        {
+          key: `${basePath}/messages`,
+          icon: <MessageOutlined />,
+          label: '消息中心'
+        },
+        {
+          key: `${basePath}/hotels`,
+          icon: <HomeOutlined />,
+          label: '酒店管理'
+        },
+        {
+          key: `${basePath}/bookings`,
+          icon: <UnorderedListOutlined />,
+          label: '预订管理'
+        },
+        {
+          key: `${basePath}/analytics`,
+          icon: <BarChartOutlined />,
+          label: '数据分析'
+        },
+        {
+          key: `${basePath}/users`,
+          icon: <UserOutlined />,
+          label: '用户管理'
+        },
+        {
+          key: `${basePath}/settings`,
+          icon: <SettingOutlined />,
+          label: '系统设置'
+        }
+      ];
+    } else {
+      // 商户菜单
+      return [
+        {
+          key: `${basePath}/dashboard`,
+          icon: <DashboardOutlined />,
+          label: '数据看板'
+        },
+        {
+          key: `${basePath}/entry`,
+          icon: <PlusOutlined />,
+          label: '商户录入'
+        },
+        {
+          key: `${basePath}/my-hotels`,
+          icon: <HomeOutlined />,
+          label: '酒店管理'
+        },
+        {
+          key: `${basePath}/bookings`,
+          icon: <UnorderedListOutlined />,
+          label: '预订管理'
+        }
+      ];
     }
-  ];
+  };
+
+  const menuItems = getMenuItems();
 
   /**
    * 处理菜单点击事件
@@ -75,6 +145,15 @@ function Sidebar() {
    */
   const toggleCollapsed = () => {
     setCollapsed(!collapsed);
+  };
+
+  /**
+   * 处理退出登录
+   */
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    message.success('已退出登录');
+    navigate('/login');
   };
 
   return (
@@ -109,9 +188,21 @@ function Sidebar() {
         className="sidebar-menu"
       />
 
-      {/* 底部信息 */}
+      {/* 底部区域 */}
       {!collapsed && (
         <div className="sidebar-footer">
+          {/* 退出登录按钮 */}
+          <Button
+            type="default"
+            danger
+            icon={<LogoutOutlined />}
+            block
+            onClick={handleLogout}
+            style={{ marginBottom: '16px' }}
+          >
+            退出登录
+          </Button>
+          {/* 版本信息 */}
           <p className="version">版本 v1.0.0</p>
           <p className="copyright">© 2024 易宿平台</p>
         </div>

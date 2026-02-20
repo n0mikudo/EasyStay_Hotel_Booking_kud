@@ -42,6 +42,7 @@ import {
   FilterOutlined
 } from '@ant-design/icons';
 import { hotelService } from '../services/api';
+import CascadingDatePicker from '../components/CascadingDatePicker';
 import './HotelManagement.css';
 
 const { Option } = Select;
@@ -63,6 +64,7 @@ function HotelManagement() {
   const [statusFilter, setStatusFilter] = useState('');
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 10 });
   const [editingHotel, setEditingHotel] = useState(null);
   const [viewingHotel, setViewingHotel] = useState(null);
   const [form] = Form.useForm();
@@ -359,10 +361,13 @@ function HotelManagement() {
           rowKey="id"
           loading={loading}
           pagination={{
-            pageSize: 10,
+            current: pagination.current,
+            pageSize: pagination.pageSize,
+            pageSizeOptions: ['10', '20', '50', '100'],
             showSizeChanger: true,
             showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 条记录`
+            showTotal: (total) => `共 ${total} 条记录`,
+            onChange: (page, pageSize) => setPagination({ current: page, pageSize })
           }}
           scroll={{ x: 1300 }}
           locale={{
@@ -483,6 +488,13 @@ function HotelManagement() {
               maxLength={1000}
               showCount
             />
+          </Form.Item>
+
+          <Form.Item
+            label="开业时间"
+            name="openDate"
+          >
+            <CascadingDatePicker placeholder="请选择开业时间" />
           </Form.Item>
 
           <Form.Item

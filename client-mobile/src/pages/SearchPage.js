@@ -21,7 +21,6 @@ import {
   Button,
   Toast,
   NavBar,
-  DatePicker,
   Tag,
   Swiper,
   Popup
@@ -32,9 +31,12 @@ import {
   FilterOutline,
   SearchOutline,
   StarOutline,
-  TagOutline
+  LocationFill
 } from 'antd-mobile-icons';
 import { hotelService } from '../services/api';
+import CityPicker from '../components/CityPicker';
+import { getLocationCity } from '../utils/geoLocation';
+import CascadingDatePicker from '../components/CascadingDatePicker';
 import './SearchPage.css';
 
 function SearchPage() {
@@ -47,34 +49,26 @@ function SearchPage() {
   const [checkOutDate, setCheckOutDate] = useState(null);
   const [starRating, setStarRating] = useState(null);
   const [priceRange, setPriceRange] = useState(null);
-  const [selectedTags, setSelectedTags] = useState([]);
+  const [hotTags, setHotTags] = useState([]);
 
   // UI状态
   const [datePickerVisible, setDatePickerVisible] = useState(false);
   const [dateType, setDateType] = useState('checkIn'); // 'checkIn' 或 'checkOut'
   const [starPickerVisible, setStarPickerVisible] = useState(false);
   const [pricePickerVisible, setPricePickerVisible] = useState(false);
+  const [cityPickerVisible, setCityPickerVisible] = useState(false);
+  const [locationLoading, setLocationLoading] = useState(false);
   const [bannerHotels, setBannerHotels] = useState([]);
+  const [bannerLoading, setBannerLoading] = useState(true);
 
-  // 快捷标签选项
-  const quickTags = [
-    { label: '亲子', value: 'family', icon: '👨‍👩‍👧‍👦' },
-    { label: '豪华', value: 'luxury', icon: '👑' },
-    { label: '免费停车', value: 'parking', icon: '🅿️' },
-    { label: '含早餐', value: 'breakfast', icon: '🍳' },
-    { label: '海景', value: 'seaview', icon: '🌊' },
-    { label: '市中心', value: 'center', icon: '🏙️' },
-    { label: '近地铁', value: 'subway', icon: '🚇' },
-    { label: '网红', value: 'popular', icon: '📸' },
-  ];
-
-  // 星级选项
+  // 星级选项（与录入表单一致）
   const starOptions = [
     { label: '不限', value: null },
     { label: '五星级', value: 5 },
     { label: '四星级', value: 4 },
     { label: '三星级', value: 3 },
-    { label: '二星级及以下', value: 2 },
+    { label: '二星级', value: 2 },
+    { label: '经济型', value: 1 },
   ];
 
   // 价格区间选项
@@ -86,11 +80,12 @@ function SearchPage() {
     { label: '¥1000以上', value: '1000+' },
   ];
 
-  // 获取Banner酒店数据
+  // 获取Banner酒店数据 + 热门筛选标签（从实际数据统计，保证可匹配）
   useEffect(() => {
     fetchBannerHotels();
-    // 尝试获取当前位置
-    getCurrentLocation();
+    hotelService.getHotTags(8).then(res => {
+      if (res.data.success && res.data.data?.length) setHotTags(res.data.data);
+    }).catch(() => {});
   }, []);
 
   /**
@@ -98,33 +93,35 @@ function SearchPage() {
    */
   const fetchBannerHotels = async () => {
     try {
+      setBannerLoading(true);
       const response = await hotelService.getHotels({ status: 'approved', limit: 5 });
       if (response.data.success && response.data.data.length > 0) {
         setBannerHotels(response.data.data.slice(0, 5));
       }
     } catch (error) {
       console.error('获取Banner酒店失败:', error);
+    } finally {
+      setBannerLoading(false);
     }
   };
 
   /**
-   * 获取当前位置
+   * 定位 - 用户主动点击后获取当前位置并填充目的城市
    */
-  const getCurrentLocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          // 这里可以调用逆地理编码API获取城市名称
-          // 简化处理，使用默认城市
-          setLocation('当前位置');
-        },
-        (error) => {
-          console.log('定位失败:', error);
-          setLocation('请选择城市');
-        }
-      );
-    } else {
-      setLocation('请选择城市');
+  const handleManualLocation = async () => {
+    setLocationLoading(true);
+    try {
+      const result = await getLocationCity();
+      if (result.city) {
+        setLocation(result.city);
+        Toast.show({ content: `已定位到 ${result.city}`, position: 'center' });
+      } else {
+        Toast.show({ content: result.error || '定位失败', position: 'center', icon: 'fail' });
+      }
+    } catch {
+      Toast.show({ content: '定位失败', position: 'center', icon: 'fail' });
+    } finally {
+      setLocationLoading(false);
     }
   };
 
@@ -177,16 +174,36 @@ function SearchPage() {
     return diffDays > 0 ? diffDays : 1;
   };
 
-  /**
-   * 处理快捷标签选择
-   * @param {string} tag - 标签值
-   */
-  const handleTagSelect = (tag) => {
-    if (selectedTags.includes(tag)) {
-      setSelectedTags(selectedTags.filter(t => t !== tag));
-    } else {
-      setSelectedTags([...selectedTags, tag]);
-    }
+  const handleHotSearch = (term) => {
+    setKeyword(term);
+    setLocation(term);
+    addSearchHistory(term);
+    const params = new URLSearchParams();
+    params.append('keyword', term);
+    params.append('city', term);
+    if (checkInDate) params.append('checkIn', checkInDate.toISOString().split('T')[0]);
+    if (checkOutDate) params.append('checkOut', checkOutDate.toISOString().split('T')[0]);
+    if (starRating) params.append('star', starRating);
+    if (priceRange) params.append('price', priceRange);
+    navigate(`/hotels?${params.toString()}`);
+  };
+
+  const handleHotTagClick = (tag) => {
+    const kw = keyword.trim() ? `${keyword} ${tag}` : tag;
+    setKeyword(kw);
+    addSearchHistory(tag);
+  };
+
+  const handleHistoryClick = (term) => {
+    const params = new URLSearchParams();
+    params.append('keyword', term);
+    const cityVal = (location && location !== '请选择城市' && location !== '当前位置') ? location : (hotSearches.includes(term) ? term : '');
+    if (cityVal) params.append('city', cityVal);
+    if (checkInDate) params.append('checkIn', checkInDate.toISOString().split('T')[0]);
+    if (checkOutDate) params.append('checkOut', checkOutDate.toISOString().split('T')[0]);
+    if (starRating) params.append('star', starRating);
+    if (priceRange) params.append('price', priceRange);
+    navigate(`/hotels?${params.toString()}`);
   };
 
   /**
@@ -197,6 +214,32 @@ function SearchPage() {
     navigate(`/hotels/${hotel.id}`);
   };
 
+  const SEARCH_HISTORY_KEY = 'easystay_search_history';
+  const MAX_HISTORY = 8;
+  const hotSearches = ['北京', '上海', '杭州', '成都', '三亚', '西安', '厦门', '丽江'];
+  const [historyRefresh, setHistoryRefresh] = useState(0);
+
+  const getSearchHistory = () => {
+    try {
+      const raw = localStorage.getItem(SEARCH_HISTORY_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch { return []; }
+  };
+
+  const addSearchHistory = (term) => {
+    if (!term?.trim()) return;
+    const hist = getSearchHistory().filter(h => h !== term.trim());
+    hist.unshift(term.trim());
+    localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(hist.slice(0, MAX_HISTORY)));
+  };
+
+  const clearSearchHistory = () => {
+    localStorage.setItem(SEARCH_HISTORY_KEY, '[]');
+    setHistoryRefresh(r => r + 1);
+  };
+
+  const searchHistory = getSearchHistory();
+
   /**
    * 处理查询按钮点击
    */
@@ -205,9 +248,10 @@ function SearchPage() {
 
     if (keyword.trim()) {
       params.append('keyword', keyword.trim());
+      addSearchHistory(keyword.trim());
     }
 
-    if (location && location !== '请选择城市') {
+    if (location && location !== '请选择城市' && location !== '当前位置') {
       params.append('city', location);
     }
 
@@ -227,10 +271,6 @@ function SearchPage() {
       params.append('price', priceRange);
     }
 
-    if (selectedTags.length > 0) {
-      params.append('tags', selectedTags.join(','));
-    }
-
     navigate(`/hotels?${params.toString()}`);
   };
 
@@ -238,6 +278,18 @@ function SearchPage() {
    * 渲染Banner区域
    */
   const renderBanner = () => {
+    if (bannerLoading) {
+      return (
+        <div className="banner-skeleton">
+          <div className="skeleton-shimmer" />
+          <div className="skeleton-content">
+            <div className="skeleton-line w60" />
+            <div className="skeleton-line w80" />
+            <div className="skeleton-line w40" />
+          </div>
+        </div>
+      );
+    }
     if (bannerHotels.length === 0) {
       return (
         <div className="banner-empty" onClick={() => navigate('/hotels')}>
@@ -251,7 +303,21 @@ function SearchPage() {
 
     return (
       <div className="banner-container">
-        <Swiper autoplay loop className="banner-swiper">
+        <Swiper
+          autoplay
+          loop
+          className="banner-swiper"
+          indicator={(total, current) => {
+            const idx = bannerHotels.length > 0 ? current % bannerHotels.length : 0;
+            return (
+              <div className="banner-indicator">
+                {bannerHotels.map((_, i) => (
+                  <span key={i} className={`indicator-dot ${i === idx ? 'active' : ''}`} />
+                ))}
+              </div>
+            );
+          }}
+        >
           {bannerHotels.map((hotel) => (
             <Swiper.Item key={hotel.id}>
               <div
@@ -271,7 +337,7 @@ function SearchPage() {
                     <div className="banner-price">
                       <span className="price-symbol">¥</span>
                       <span className="price-value">{hotel.price}</span>
-                      <span className="price-unit">/晚</span>
+                      <span className="price-unit">起/晚</span>
                     </div>
                   </div>
                 </div>
@@ -300,11 +366,24 @@ function SearchPage() {
           <div className="form-icon">
             <EnvironmentOutline />
           </div>
-          <div className="form-content">
-            <div className="form-label">目的地</div>
-            <div className="form-value" onClick={() => Toast.show({ content: '城市选择功能开发中', position: 'center' })}>
-              {location || '请选择城市'}
+          <div className="form-content location-content">
+            <div className="location-row">
+              <div className="form-label">目的地</div>
+              <div className="form-value" onClick={() => setCityPickerVisible(true)}>
+                {location || '请选择城市'}
+              </div>
             </div>
+            <Button
+              size="small"
+              fill="outline"
+              color="primary"
+              loading={locationLoading}
+              className="location-btn"
+              onClick={(e) => { e.stopPropagation(); handleManualLocation(); }}
+            >
+              <LocationFill style={{ marginRight: 4 }} />
+              定位
+            </Button>
           </div>
         </div>
 
@@ -344,22 +423,6 @@ function SearchPage() {
           </div>
         </div>
 
-        {/* 关键字搜索 */}
-        <div className="form-item keyword-item">
-          <div className="form-icon">
-            <SearchOutline />
-          </div>
-          <div className="form-content">
-            <div className="form-label">关键词</div>
-            <SearchBar
-              placeholder="酒店名/位置/品牌"
-              value={keyword}
-              onChange={setKeyword}
-              className="keyword-search"
-            />
-          </div>
-        </div>
-
         {/* 筛选条件 */}
         <div className="filter-row">
           <div
@@ -382,24 +445,70 @@ function SearchPage() {
           </div>
         </div>
 
-        {/* 快捷标签 */}
-        <div className="quick-tags-section">
+        {/* 热门搜索 */}
+        <div className="search-history-section">
           <div className="section-title">
-            <TagOutline className="section-icon" />
-            <span>快捷筛选</span>
+            <SearchOutline className="section-icon" />
+            <span>热门目的地</span>
           </div>
-          <div className="tags-container">
-            {quickTags.map((tag) => (
+          <div className="hot-tags">
+            {hotSearches.map((city) => (
               <Tag
-                key={tag.value}
-                className={`quick-tag ${selectedTags.includes(tag.value) ? 'active' : ''}`}
-                onClick={() => handleTagSelect(tag.value)}
+                key={city}
+                className="hot-tag"
+                onClick={() => handleHotSearch(city)}
               >
-                <span className="tag-icon">{tag.icon}</span>
-                <span className="tag-label">{tag.label}</span>
+                {city}
               </Tag>
             ))}
           </div>
+        </div>
+
+        {/* 搜索历史 */}
+        {searchHistory.length > 0 && (
+          <div className="search-history-section">
+            <div className="section-title">
+              <span>搜索历史</span>
+              <span className="clear-history" onClick={clearSearchHistory}>清空</span>
+            </div>
+            <div className="hot-tags">
+              {searchHistory.map((term) => (
+                <Tag
+                  key={term}
+                  className="hot-tag history-tag"
+                  onClick={() => handleHistoryClick(term)}
+                >
+                  {term}
+                </Tag>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 智能搜索 + 热门筛选（数据驱动，保证可匹配） */}
+        <div className="smart-search-section">
+          <div className="section-title">
+            <SearchOutline className="section-icon" />
+            <span>智能搜索</span>
+          </div>
+          <SearchBar
+            placeholder="试试：武汉、停车场、海景、亲子、近地铁..."
+            value={keyword}
+            onChange={setKeyword}
+            className="smart-search-input"
+          />
+          {hotTags.length > 0 && (
+            <div className="hot-tags-row">
+              <span className="hot-tags-label">热门：</span>
+              <div className="hot-tags-wrap">
+                {hotTags.map((t) => (
+                  <Tag key={t.value} className="hot-filter-tag" onClick={() => handleHotTagClick(t.label)}>
+                    {t.label}
+                  </Tag>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* 查询按钮 */}
@@ -414,20 +523,20 @@ function SearchPage() {
         </Button>
       </div>
 
-      {/* 日期选择器弹窗 */}
+      {/* 日期选择器弹窗 - 级联年月日 */}
       <Popup
         visible={datePickerVisible}
         onMaskClick={() => setDatePickerVisible(false)}
-        bodyStyle={{ height: '50vh' }}
+        bodyStyle={{ height: '50vh', borderTopLeftRadius: 12, borderTopRightRadius: 12 }}
       >
-        <div className="picker-header">
-          <span className="picker-title">选择{dateType === 'checkIn' ? '入住' : '离店'}日期</span>
-          <Button onClick={() => setDatePickerVisible(false)}>完成</Button>
-        </div>
-        <DatePicker
+        <CascadingDatePicker
+          embedded
+          visible={datePickerVisible}
           value={dateType === 'checkIn' ? checkInDate : checkOutDate}
           onConfirm={handleDateConfirm}
-          min={new Date()}
+          onClose={() => setDatePickerVisible(false)}
+          min={dateType === 'checkIn' ? new Date() : new Date((checkInDate || new Date()).getTime() + 86400000)}
+          title={`选择${dateType === 'checkIn' ? '入住' : '离店'}日期`}
         />
       </Popup>
 
@@ -482,6 +591,14 @@ function SearchPage() {
           ))}
         </div>
       </Popup>
+
+      {/* 城市选择器 */}
+      <CityPicker
+        visible={cityPickerVisible}
+        onClose={() => setCityPickerVisible(false)}
+        value={location !== '请选择城市' && location !== '当前位置' ? location : ''}
+        onSelect={(city) => setLocation(city)}
+      />
     </div>
   );
 }

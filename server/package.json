@@ -5,12 +5,19 @@
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
-    "dev": "nodemon app.js"
+    "dev": "nodemon app.js",
+    "seed": "node scripts/seed-database.js",
+    "seed:replace": "node scripts/seed-database.js --replace-seed",
+    "seed:dedupe": "node scripts/seed-database.js --dedupe-only",
+    "seed:large": "node scripts/seed-database.js --merchants=120 --hotels=600",
+    "seed:simple": "node scripts/seed-database.js --simple-usernames",
+    "export:merchants": "node scripts/export-merchant-credentials.js"
   },
   "keywords": ["hotel", "booking", "api"],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "cors": "^2.8.5",
     "body-parser": "^1.20.2"

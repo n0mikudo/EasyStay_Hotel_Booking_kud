@@ -9,8 +9,26 @@
  */
 
 /* 页面容器 */
-.merchant-entry-page {
-  padding-bottom: 24px;
+.merchant-entry {
+  padding-bottom: var(--spacing-xl);
+}
+
+/* 页面头部 */
+.page-header {
+  margin-bottom: var(--spacing-lg);
+}
+
+.page-title {
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-xs);
+}
+
+.page-subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin: 0;
 }
 
 /* 头部内容 */
@@ -19,29 +37,37 @@
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: var(--spacing-md);
 }
 
 .example-btn {
-  border-color: #1890ff;
-  color: #1890ff;
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  border-radius: var(--border-radius-md);
+  transition: all var(--transition-fast) var(--transition-ease);
 }
 
 .example-btn:hover {
-  background: #e6f7ff;
+  background: var(--color-primary-light);
   border-color: #40a9ff;
   color: #40a9ff;
 }
 
 /* 提示信息 */
 .info-alert {
-  margin-bottom: 24px;
-  border-radius: 8px;
+  margin-bottom: var(--spacing-lg);
+  border-radius: var(--border-radius-lg);
 }
 
 /* 表单卡片 */
 .form-card {
-  border-radius: 8px;
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-normal) var(--transition-ease);
+}
+
+.form-card:hover {
+  box-shadow: var(--shadow-md);
 }
 
 /* 表单样式 */
@@ -49,36 +75,51 @@
   max-width: 900px;
 }
 
+/* 表单项 */
+.form-item {
+  margin-bottom: var(--spacing-md);
+}
+
 /* 字段图标 */
 .field-icon {
-  margin-right: 6px;
-  color: #1890ff;
+  margin-right: var(--spacing-xs);
+  color: var(--color-primary);
 }
 
 /* 信息图标 */
 .info-icon {
-  margin-left: 6px;
-  color: #8c8c8c;
+  margin-left: var(--spacing-xs);
+  color: var(--color-text-secondary);
   cursor: help;
 }
 
 /* 表单输入框 */
 .form-input {
-  border-radius: 6px;
+  border-radius: var(--border-radius-md);
+  transition: all var(--transition-fast) var(--transition-ease);
 }
 
 .form-input:hover,
 .form-input:focus {
   border-color: #40a9ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
 }
 
 /* 表单选择器 */
 .form-select {
   width: 100%;
+  border-radius: var(--border-radius-md);
+  transition: all var(--transition-fast) var(--transition-ease);
 }
 
 .form-select .ant-select-selector {
-  border-radius: 6px !important;
+  border-radius: var(--border-radius-md) !important;
+}
+
+.form-select:hover,
+.form-select:focus {
+  border-color: #40a9ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
 }
 
 /* 数字输入框 */
@@ -87,30 +128,62 @@
 }
 
 .form-input-number .ant-input-number {
-  border-radius: 6px;
+  border-radius: var(--border-radius-md);
   width: 100%;
+  transition: all var(--transition-fast) var(--transition-ease);
+}
+
+.form-input-number .ant-input-number:hover,
+.form-input-number .ant-input-number:focus {
+  border-color: #40a9ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
 }
 
 /* 文本域 */
 .form-textarea {
-  border-radius: 6px;
+  border-radius: var(--border-radius-md);
+  transition: all var(--transition-fast) var(--transition-ease);
 }
 
 .form-textarea:hover,
 .form-textarea:focus {
   border-color: #40a9ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
 }
 
 /* 表单操作区 */
 .form-actions {
-  margin-top: 32px;
-  padding-top: 24px;
-  border-top: 1px solid #f0f0f0;
+  margin-top: var(--spacing-xl);
+  padding-top: var(--spacing-lg);
+  border-top: 1px solid var(--color-border);
 }
 
-.submit-btn {
+/* 提交按钮 */
+.btn-submit {
   min-width: 140px;
-  border-radius: 6px;
+  border-radius: var(--border-radius-md);
+  transition: all var(--transition-fast) var(--transition-ease);
+}
+
+.btn-submit:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.3);
+}
+
+/* 动画效果 */
+.fade-in {
+  animation: fadeIn var(--transition-normal) var(--transition-ease) forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(var(--spacing-sm));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* 响应式适配 */
@@ -129,10 +202,49 @@
       display: flex;
       flex-direction: column;
       width: 100%;
+      gap: var(--spacing-sm);
     }
 
     .ant-btn {
       width: 100%;
     }
   }
+
+  .form-card {
+    border-radius: var(--border-radius-md);
+  }
+
+  .form-item {
+    margin-bottom: var(--spacing-sm);
+  }
+}
+
+/* 房型编辑器 */
+.room-types-editor {
+  border: 1px dashed var(--color-border);
+  border-radius: var(--border-radius-md);
+  padding: 16px;
+  background: linear-gradient(135deg, #fafbff 0%, #f8f9fc 100%);
+}
+
+.room-type-row {
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #e8eef7;
+  transition: box-shadow 0.2s ease;
+}
+
+.room-type-row:hover {
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.08);
+}
+
+.room-type-add-btn {
+  border-style: dashed !important;
+  color: var(--color-primary) !important;
+}
+
+.room-type-remove:hover {
+  color: #ff7875 !important;
 }

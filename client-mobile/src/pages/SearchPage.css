@@ -9,18 +9,19 @@
  * 5. 快捷标签样式
  */
 
-/* 页面容器 */
+/* 页面容器 - 渐变背景 */
 .search-page {
   min-height: 100vh;
-  background: linear-gradient(180deg, #f5f7fa 0%, #ffffff 100%);
+  background: linear-gradient(180deg, #EEF2FF 0%, #F8FAFC 50%, #ffffff 100%);
   padding-bottom: 32px;
 }
 
-/* 顶部导航 */
+/* 顶部导航 - 渐变主色 */
 .search-nav {
-  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+  background: var(--gradient-primary);
   --adm-nav-bar-text-color: #ffffff;
-  --adm-nav-bar-title-font-size: 18px;
+  --adm-nav-bar-title-font-size: var(--font-size-xl);
+  box-shadow: var(--shadow-md);
 }
 
 .nav-title {
@@ -32,12 +33,38 @@
 /* Banner区域 */
 .banner-container {
   width: 100%;
-  height: 200px;
-  background: #f0f0f0;
+  height: 220px;
+  background: var(--color-bg-muted);
+  position: relative;
 }
 
 .banner-swiper {
   height: 100%;
+}
+
+/* Banner 指示器 */
+.banner-indicator {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  z-index: 2;
+}
+
+.indicator-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.5);
+  transition: all 0.3s ease;
+}
+
+.indicator-dot.active {
+  width: 16px;
+  border-radius: var(--radius-full);
+  background: #ffffff;
 }
 
 .banner-item {
@@ -47,6 +74,18 @@
   background-position: center;
   position: relative;
   cursor: pointer;
+  overflow: hidden;
+  transition: transform var(--transition-slow);
+}
+.banner-item:active {
+  transform: scale(0.98);
+}
+.banner-item::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 80% 50% at 50% 100%, rgba(99, 102, 241, 0.2) 0%, transparent 70%);
+  pointer-events: none;
 }
 
 .banner-overlay {
@@ -108,6 +147,36 @@
   opacity: 0.9;
 }
 
+/* Banner 骨架屏 */
+.banner-skeleton {
+  width: 100%;
+  height: 220px;
+  background: linear-gradient(90deg, #F1F5F9 25%, #E2E8F0 50%, #F1F5F9 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  position: relative;
+  overflow: hidden;
+}
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.banner-skeleton .skeleton-content {
+  position: absolute;
+  bottom: 20px;
+  left: 16px;
+  right: 16px;
+}
+.banner-skeleton .skeleton-line {
+  height: 12px;
+  background: rgba(255,255,255,0.3);
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+.banner-skeleton .skeleton-line.w60 { width: 60%; }
+.banner-skeleton .skeleton-line.w80 { width: 80%; }
+.banner-skeleton .skeleton-line.w40 { width: 40%; }
+
 /* Banner空状态 */
 .banner-empty {
   width: 100%;
@@ -135,15 +204,22 @@
   font-weight: 500;
 }
 
-/* 核心查询区域 */
+/* 核心查询区域 - 玻璃拟态 */
 .search-form-container {
-  margin: -20px 16px 0;
-  background: #ffffff;
-  border-radius: 16px;
-  padding: 20px 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  margin: -24px var(--spacing-lg) 0;
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-xl) var(--spacing-lg);
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--glass-border);
   position: relative;
   z-index: 10;
+  transition: box-shadow var(--transition-normal);
+}
+.search-form-container:active {
+  box-shadow: var(--shadow-glow);
 }
 
 /* 表单项 */
@@ -192,6 +268,23 @@
   color: #262626;
   font-weight: 500;
   cursor: pointer;
+}
+
+.location-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.location-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.location-btn {
+  align-self: flex-start;
+  --border-radius: 20px;
 }
 
 /* 日期选择 */
@@ -277,9 +370,96 @@
   color: #595959;
 }
 
-/* 快捷标签区域 */
-.quick-tags-section {
+/* 搜索历史与热门 */
+.search-history-section {
   padding: 16px 0;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.search-history-section .section-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.clear-history {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+}
+
+.hot-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.hot-tag {
+  padding: 6px 12px;
+  background: var(--color-bg-muted);
+  border-radius: 16px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.hot-tag:active {
+  background: var(--gradient-primary-subtle);
+  color: var(--color-primary);
+}
+
+.history-tag {
+  background: var(--color-bg-hover);
+}
+
+/* 智能搜索 + 热门筛选 */
+.smart-search-section {
+  padding: 16px 0;
+}
+
+.smart-search-input {
+  --adm-search-background: #f5f5f5;
+  --adm-search-padding: 10px 14px;
+  border-radius: 10px;
+  margin-bottom: 12px;
+}
+
+.hot-tags-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.hot-tags-label {
+  font-size: 12px;
+  color: #8c8c8c;
+  flex-shrink: 0;
+}
+
+.hot-tags-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.hot-filter-tag {
+  padding: 5px 12px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  color: #333 !important;
+  background: #e0e0e0 !important;
+  border: 1px solid #bbb !important;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.hot-filter-tag:active {
+  background: var(--gradient-primary-subtle) !important;
+  color: var(--color-primary) !important;
+  border-color: var(--color-primary) !important;
 }
 
 .section-title {
@@ -298,52 +478,21 @@
   color: #1890ff;
 }
 
-.tags-container {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.quick-tag {
-  padding: 6px 12px;
-  background: #f5f5f5;
-  border: 1px solid transparent;
-  border-radius: 16px;
-  font-size: 13px;
-  color: #595959;
-  cursor: pointer;
-  transition: all 0.3s;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.quick-tag.active {
-  background: #e6f7ff;
-  border-color: #1890ff;
-  color: #1890ff;
-}
-
-.tag-icon {
-  font-size: 14px;
-}
-
-.tag-label {
-  font-size: 13px;
-}
-
-/* 查询按钮 */
+/* 查询按钮 - 渐变+光晕 */
 .search-btn {
-  margin-top: 20px;
-  height: 48px;
-  font-size: 16px;
-  font-weight: 600;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+  margin-top: var(--spacing-xl);
+  height: 52px;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  border-radius: var(--radius-lg);
+  background: var(--gradient-primary);
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4);
+  border: none;
+  transition: all var(--transition-normal);
 }
-
 .search-btn:active {
-  opacity: 0.9;
+  transform: scale(0.98);
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.3);
 }
 
 /* 选择器弹窗 */

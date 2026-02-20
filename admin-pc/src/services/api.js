@@ -10,8 +10,8 @@
 
 import axios from 'axios';
 
-// API基础URL
-const API_BASE_URL = 'http://localhost:3000/api';
+// API基础URL：开发环境直连后端 3000 端口，生产环境可配置 REACT_APP_API_URL
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000/api';
 
 /**
  * 创建axios实例
@@ -77,7 +77,10 @@ export const hotelService = {
    * @param {string} id - 酒店ID
    * @returns {Promise} 请求Promise
    */
-  getHotelById: (id) => api.get(`/hotels/${id}`),
+  getHotelById: (id, userId) => {
+    const params = userId ? { userId } : {};
+    return api.get(`/hotels/${id}`, { params });
+  },
 
   /**
    * 创建酒店
@@ -90,9 +93,15 @@ export const hotelService = {
    * 更新酒店信息
    * @param {string} id - 酒店ID
    * @param {Object} data - 更新数据
+   * @param {Object} options - 选项参数
    * @returns {Promise} 请求Promise
    */
-  updateHotel: (id, data) => api.put(`/hotels/${id}`, data),
+  updateHotel: (id, data, options = {}) => {
+    const params = {};
+    if (options.userId) params.userId = options.userId;
+    if (options.role) params.role = options.role;
+    return api.put(`/hotels/${id}`, data, { params });
+  },
 
   /**
    * 更新酒店状态
@@ -100,14 +109,42 @@ export const hotelService = {
    * @param {string} status - 新状态
    * @returns {Promise} 请求Promise
    */
-  updateHotelStatus: (id, status) => api.put(`/hotels/${id}/status`, { status }),
+  updateHotelStatus: (id, status, adminInfo = {}) => api.put(`/hotels/${id}/status`, { status, adminId: adminInfo.id, adminUsername: adminInfo.username }),
 
   /**
    * 删除酒店
    * @param {string} id - 酒店ID
    * @returns {Promise} 请求Promise
    */
-  deleteHotel: (id) => api.delete(`/hotels/${id}`)
+  deleteHotel: (id, options = {}) => {
+    const params = {};
+    if (options.userId) params.userId = options.userId;
+    if (options.role) params.role = options.role;
+    return api.delete(`/hotels/${id}`, { params });
+  },
+
+  /**
+   * 批量更新酒店状态
+   * @param {string[]} ids - 酒店ID数组
+   * @param {string} status - 新状态
+   */
+  batchUpdateHotelStatus: (ids, status) => Promise.all(ids.map(id => api.put(`/hotels/${id}/status`, { status }))),
+
+  /**
+   * 批量删除酒店（仅已下线）
+   * @param {string[]} ids - 酒店ID数组
+   */
+  batchDeleteHotels: (ids, options = {}) => Promise.all(ids.map(id => api.delete(`/hotels/${id}`, { params: { role: 'admin', ...options } }))),
+
+  /**
+   * 审核酒店
+   * @param {string} id - 酒店ID
+   * @param {string} status - 审核状态
+   * @param {string} rejectReason - 拒绝原因（status为rejected时必填）
+   * @returns {Promise} 请求Promise
+   */
+  auditHotel: (id, status, rejectReason = '', adminInfo = {}) =>
+    api.put(`/hotels/${id}/status`, { status, rejectReason, adminId: adminInfo.id, adminUsername: adminInfo.username })
 };
 
 /**
@@ -119,6 +156,75 @@ export const statsService = {
    * @returns {Promise} 请求Promise
    */
   getStats: () => api.get('/stats')
+};
+
+/**
+ * 活动服务API
+ */
+export const activityService = {
+  /**
+   * 获取最近活动
+   * @returns {Promise} 请求Promise
+   */
+  getActivities: () => api.get('/activities')
+};
+
+/**
+ * 认证服务API
+ */
+export const authService = {
+  /**
+   * 用户登录
+   * @param {Object} credentials - 登录凭证
+   * @returns {Promise} 请求Promise
+   */
+  login: (credentials) => api.post('/auth/login', credentials),
+
+  /**
+   * 用户注册
+   * @param {Object} userData - 用户数据
+   * @returns {Promise} 请求Promise
+   */
+  register: (userData) => api.post('/auth/register', userData)
+};
+
+/**
+ * 预订服务API
+ */
+export const bookingService = {
+  getBookings: (params) => api.get('/bookings', { params })
+};
+
+/**
+ * 邀请码服务API（管理员生成新管理员邀请码）
+ */
+export const inviteCodeService = {
+  create: (adminUserId) => api.post('/invite-codes', { adminUserId })
+};
+
+/**
+ * 用户服务API
+ */
+export const userService = {
+  getUsers: (params) => api.get('/users', { params }),
+  deleteUser: (id) => api.delete(`/users/${id}`),
+  batchDeleteUsers: (ids) => api.post('/users/batch-delete', { ids })
+};
+
+/**
+ * 系统设置API
+ */
+export const settingsService = {
+  getSettings: () => api.get('/settings'),
+  updateSettings: (data) => api.put('/settings', data)
+};
+
+/**
+ * 权限与日志API
+ */
+export const systemService = {
+  getPermissions: () => api.get('/permissions'),
+  getLogs: (limit = 100) => api.get('/system-logs', { params: { limit } })
 };
 
 export default api;

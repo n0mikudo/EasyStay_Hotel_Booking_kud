@@ -9,11 +9,11 @@
  * 5. 筛选弹窗样式
  */
 
-/* 页面容器 */
+/* 页面容器 - 底部留出 TabBar 空间 */
 .hotel-list-page {
   min-height: 100vh;
-  background: #f5f7fa;
-  padding-bottom: 20px;
+  background: var(--color-bg-page);
+  padding-bottom: calc(60px + env(safe-area-inset-bottom, 0));
 }
 
 /* 顶部导航栏 */
@@ -136,15 +136,17 @@
 
 /* 酒店卡片 */
 .hotel-card {
-  margin-bottom: 12px;
-  border-radius: 12px;
+  margin-bottom: var(--spacing-md);
+  border-radius: var(--radius-lg);
   overflow: hidden;
-  background: #ffffff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
 
 .hotel-card:active {
-  opacity: 0.95;
+  box-shadow: var(--shadow-md);
+  transform: scale(0.99);
 }
 
 .hotel-card-content {
@@ -154,13 +156,18 @@
 
 /* 酒店图片 */
 .hotel-image-wrapper {
-  width: 120px;
-  height: 120px;
-  border-radius: 8px;
+  width: 128px;
+  height: 128px;
+  border-radius: var(--radius-md);
   overflow: hidden;
   flex-shrink: 0;
-  margin-right: 12px;
+  margin-right: var(--spacing-md);
   position: relative;
+}
+
+.hotel-image-wrapper .lazy-image-wrap {
+  width: 100%;
+  height: 100%;
 }
 
 .hotel-image {
@@ -210,11 +217,11 @@
 }
 
 .hotel-name {
-  font-size: 16px;
-  font-weight: 600;
-  color: #262626;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
   margin: 0;
-  line-height: 1.4;
+  line-height: var(--line-height-tight);
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -299,9 +306,9 @@
 }
 
 .price-value {
-  font-size: 20px;
-  font-weight: 700;
-  color: #ff4d4f;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-accent);
   margin: 0 2px;
 }
 
@@ -324,9 +331,25 @@
 /* 结果统计 */
 .result-count {
   text-align: center;
+  padding: var(--spacing-lg);
+  font-size: var(--font-size-base);
+  color: var(--color-text-tertiary);
+}
+
+/* 加载更多 */
+.load-more-wrap {
   padding: 16px;
-  font-size: 14px;
-  color: #8c8c8c;
+}
+
+.load-more-btn {
+  --border-radius: 24px;
+}
+
+.load-more-tip {
+  text-align: center;
+  padding: var(--spacing-lg);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
 }
 
 /* 筛选弹窗 */
@@ -457,6 +480,6 @@
 /* 安全区域适配 */
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .hotel-list-page {
-    padding-bottom: env(safe-area-inset-bottom);
+    padding-bottom: calc(60px + env(safe-area-inset-bottom));
   }
 }

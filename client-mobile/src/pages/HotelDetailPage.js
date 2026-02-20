@@ -25,7 +25,6 @@ import {
   Card,
   Skeleton,
   Popup,
-  DatePicker,
   Stepper
 } from 'antd-mobile';
 import {
@@ -39,7 +38,8 @@ import {
   TeamOutline,
   PhonebookOutline
 } from 'antd-mobile-icons';
-import { hotelService } from '../services/api';
+import { hotelService, bookingService } from '../services/api';
+import CascadingDatePicker from '../components/CascadingDatePicker';
 import './HotelDetailPage.css';
 
 function HotelDetailPage() {
@@ -53,6 +53,7 @@ function HotelDetailPage() {
 
   // 预订相关状态
   const [bookingVisible, setBookingVisible] = useState(false);
+  const [selectedRoomType, setSelectedRoomType] = useState(null);
   const [checkInDate, setCheckInDate] = useState(new Date());
   const [checkOutDate, setCheckOutDate] = useState(new Date(Date.now() + 86400000));
   const [guestCount, setGuestCount] = useState(2);
@@ -84,9 +85,41 @@ function HotelDetailPage() {
     'robe': '🥼',
   };
 
+  const FAVORITES_KEY = 'easystay_favorites';
+
+  const getFavorites = () => {
+    try {
+      const raw = localStorage.getItem(FAVORITES_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch { return []; }
+  };
+
   // 加载酒店详情
   useEffect(() => {
     loadHotelDetail();
+  }, [id]);
+
+  // 酒店加载后默认选中最便宜房型
+  useEffect(() => {
+    if (!hotel) {
+      setSelectedRoomType(null);
+      return;
+    }
+    if (hotel.roomTypes && hotel.roomTypes.length > 0) {
+      const sorted = [...hotel.roomTypes].sort((a, b) => (a.price || 0) - (b.price || 0));
+      setSelectedRoomType(sorted[0]);
+    } else if (hotel.price) {
+      setSelectedRoomType({ name: '标准间', price: hotel.price });
+    } else {
+      setSelectedRoomType(null);
+    }
+  }, [hotel?.id]);
+
+  useEffect(() => {
+    if (id) {
+      const favs = getFavorites();
+      setIsFavorite(favs.includes(id));
+    }
   }, [id]);
 
   /**
@@ -117,35 +150,80 @@ function HotelDetailPage() {
   };
 
   /**
-   * 处理收藏
+   * 处理收藏 - 持久化到 localStorage
    */
   const handleFavorite = () => {
-    setIsFavorite(!isFavorite);
-    Toast.show({
-      content: isFavorite ? '已取消收藏' : '已添加到收藏',
-      position: 'center',
-    });
+    const favs = getFavorites();
+    const next = !isFavorite;
+    setIsFavorite(next);
+    if (next) {
+      localStorage.setItem(FAVORITES_KEY, JSON.stringify([...favs, id]));
+      Toast.show({ content: '已添加到收藏', position: 'center' });
+    } else {
+      localStorage.setItem(FAVORITES_KEY, JSON.stringify(favs.filter(f => f !== id)));
+      Toast.show({ content: '已取消收藏', position: 'center' });
+    }
   };
 
   /**
-   * 处理预订
+   * 处理预订 - 需已选房型
    */
   const handleBooking = () => {
+    if (!selectedRoomType) {
+      Toast.show({ content: '请先选择房型', position: 'center' });
+      return;
+    }
     setBookingVisible(true);
   };
 
   /**
-   * 确认预订
+   * 确认预订 - 对接后端API，预订所选具体房型
    */
-  const confirmBooking = () => {
-    const nights = Math.ceil((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
-    const totalPrice = hotel.price * roomCount * nights;
+  const confirmBooking = async () => {
+    if (!selectedRoomType) {
+      Toast.show({ content: '请选择房型', position: 'center' });
+      return;
+    }
+    const nights = getNightsCount();
+    const totalPrice = getTotalPrice();
+    const roomTypeIndex = hotel.roomTypes ? hotel.roomTypes.findIndex(r => r.name === selectedRoomType.name && r.price === selectedRoomType.price) : 0;
 
-    Toast.show({
-      content: `预订成功！总价：¥${totalPrice}`,
-      position: 'center',
-    });
-    setBookingVisible(false);
+    try {
+      const response = await bookingService.createBooking({
+        hotelId: hotel.id,
+        hotelName: hotel.name,
+        roomType: selectedRoomType.name,
+        roomPrice: selectedRoomType.price,
+        roomTypeDescription: selectedRoomType.description || undefined,
+        roomTypeIndex: roomTypeIndex >= 0 ? roomTypeIndex : 0,
+        checkIn: checkInDate.toISOString().split('T')[0],
+        checkOut: checkOutDate.toISOString().split('T')[0],
+        nights,
+        guestCount,
+        roomCount,
+        totalPrice
+      });
+
+      if (response.data.success) {
+        Toast.show({
+          content: `预订成功！总价：¥${totalPrice}`,
+          position: 'center',
+        });
+        setBookingVisible(false);
+      } else {
+        Toast.show({
+          content: response.data.message || '预订失败',
+          position: 'center',
+          icon: 'fail',
+        });
+      }
+    } catch (error) {
+      Toast.show({
+        content: error.response?.data?.message || '预订失败，请稍后重试',
+        position: 'center',
+        icon: 'fail',
+      });
+    }
   };
 
   /**
@@ -192,19 +270,19 @@ function HotelDetailPage() {
   };
 
   /**
-   * 计算总价
+   * 计算总价（使用所选房型价格）
    */
   const getTotalPrice = () => {
-    if (!hotel) return 0;
+    if (!selectedRoomType) return 0;
     const nights = getNightsCount();
-    return hotel.price * roomCount * nights;
+    return (selectedRoomType.price || 0) * roomCount * nights;
   };
 
   // 加载中状态
   if (loading) {
     return (
       <div className="hotel-detail-page">
-        <NavBar onBack={() => navigate(-1)}>酒店详情</NavBar>
+        <NavBar onBack={() => navigate('/hotels')}>酒店详情</NavBar>
         <div className="skeleton-container">
           <Skeleton.Title animated />
           <Skeleton.Paragraph lineCount={5} animated />
@@ -217,7 +295,7 @@ function HotelDetailPage() {
   if (!hotel) {
     return (
       <div className="hotel-detail-page">
-        <NavBar onBack={() => navigate(-1)}>酒店详情</NavBar>
+        <NavBar onBack={() => navigate('/hotels')}>酒店详情</NavBar>
         <div className="empty-state">
           <p>酒店不存在或已下架</p>
           <Button onClick={() => navigate('/hotels')}>返回列表</Button>
@@ -231,10 +309,10 @@ function HotelDetailPage() {
 
   return (
     <div className="hotel-detail-page">
-      {/* 顶部导航 */}
+      {/* 顶部导航 - PDF要求：显示酒店名称及返回列表页功能 */}
       <NavBar
         className="detail-nav"
-        onBack={() => navigate(-1)}
+        onBack={() => navigate('/hotels')}
         right={
           <div className="nav-actions">
             <div className="action-btn" onClick={handleFavorite}>
@@ -247,13 +325,30 @@ function HotelDetailPage() {
           </div>
         }
       >
-        酒店详情
+        <span className="nav-title-text">{hotel.name}</span>
       </NavBar>
 
-      {/* 图片轮播 */}
+      {/* 图片轮播 - 支持左右滚动，带指示器 */}
       <div className="image-gallery">
         {images.length > 0 ? (
-          <Swiper className="image-swiper" loop autoplay>
+          <Swiper
+            className="image-swiper"
+            loop
+            autoplay
+            indicator={(total, current) => {
+              const idx = images.length > 0 ? current % images.length : 0;
+              return (
+                <div className="gallery-indicator">
+                  <span className="gallery-counter">{idx + 1}/{images.length}</span>
+                  <div className="gallery-dots">
+                    {images.map((_, i) => (
+                      <span key={i} className={`gallery-dot ${i === idx ? 'active' : ''}`} />
+                    ))}
+                  </div>
+                </div>
+              );
+            }}
+          >
             {images.map((image, index) => (
               <Swiper.Item key={index}>
                 <Image
@@ -270,15 +365,15 @@ function HotelDetailPage() {
             <span className="placeholder-icon">🏨</span>
           </div>
         )}
-        <div className="image-counter">
-          {images.length > 0 ? `1/${images.length}` : '无图片'}
-        </div>
       </div>
 
-      {/* 酒店基本信息 */}
+      {/* 酒店基本信息 - PDF要求：酒店名(中/英显示) */}
       <div className="hotel-basic-info">
         <div className="hotel-title-section">
-          <h1 className="hotel-name">{hotel.name}</h1>
+          <div className="hotel-name-block">
+            <h1 className="hotel-name">{hotel.name}</h1>
+            {hotel.nameEn && <p className="hotel-name-en">{hotel.nameEn}</p>}
+          </div>
           <div className="hotel-rating">
             <div className="rating-score">
               <StarFill className="star-icon" />
@@ -289,9 +384,9 @@ function HotelDetailPage() {
         </div>
 
         <div className="hotel-tags">
-          {hotel.star && (
+          {hotel.rating && (
             <Tag color="warning" fill="outline">
-              {hotel.star}星级
+              {hotel.rating}星级
             </Tag>
           )}
           {hotel.isRecommended && (
@@ -302,12 +397,72 @@ function HotelDetailPage() {
           <Tag color="primary" fill="outline">
             {hotel.city}
           </Tag>
+          {hotel.openDate && (
+            <Tag color="default" fill="outline">
+              开业于 {hotel.openDate}
+            </Tag>
+          )}
         </div>
 
         <div className="hotel-address">
           <EnvironmentOutline className="address-icon" />
           <span className="address-text">{hotel.address}</span>
-          <Button size="mini" className="map-btn">地图</Button>
+          <Button
+            size="mini"
+            className="map-btn"
+            onClick={() => {
+              const addr = encodeURIComponent(`${hotel.name} ${hotel.address}`);
+              window.open(`https://uri.amap.com/marker?position=116.397128,39.916527&name=${encodeURIComponent(hotel.name)}&address=${addr}`, '_blank');
+            }}
+          >
+            地图
+          </Button>
+        </div>
+
+        {/* 评分分布可视化 */}
+        <div className="score-distribution">
+          <div className="score-bar-item">
+            <span className="score-label">环境</span>
+            <div className="score-bar-track">
+              <div className="score-bar-fill" style={{ width: `${(hotel.rating || 4.5) / 5 * 100}%` }} />
+            </div>
+            <span className="score-num">{hotel.rating || 4.5}</span>
+          </div>
+          <div className="score-bar-item">
+            <span className="score-label">服务</span>
+            <div className="score-bar-track">
+              <div className="score-bar-fill" style={{ width: `${Math.min(100, ((hotel.rating || 4.5) + 0.2) / 5 * 100)}%` }} />
+            </div>
+            <span className="score-num">{(parseFloat(hotel.rating) || 4.5) + 0.2}</span>
+          </div>
+          <div className="score-bar-item">
+            <span className="score-label">设施</span>
+            <div className="score-bar-track">
+              <div className="score-bar-fill" style={{ width: `${(hotel.rating || 4.5) / 5 * 100}%` }} />
+            </div>
+            <span className="score-num">{hotel.rating || 4.5}</span>
+          </div>
+        </div>
+
+        {/* 周边推荐 */}
+        <div className="nearby-section">
+          <div className="nearby-title">周边推荐</div>
+          <div className="nearby-list">
+            {[
+              { name: '市中心商圈', distance: '约1.2km', icon: '🏙️' },
+              { name: '地铁站', distance: '约500m', icon: '🚇' },
+              { name: '热门景点', distance: '约2km', icon: '🏛️' },
+              { name: '美食街', distance: '约800m', icon: '🍜' }
+            ].map((item, i) => (
+              <div key={i} className="nearby-item">
+                <span className="nearby-icon">{item.icon}</span>
+                <div className="nearby-info">
+                  <span className="nearby-name">{item.name}</span>
+                  <span className="nearby-distance">{item.distance}</span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         {hotel.phone && (
@@ -320,6 +475,45 @@ function HotelDetailPage() {
           </div>
         )}
       </div>
+
+      {/* 房型价格列表 - 按价格从低到高，点击选择预订房型 */}
+      <Card className="room-types-card" title="选择房型">
+        <List>
+          {(() => {
+            const roomTypes = hotel.roomTypes && hotel.roomTypes.length > 0
+              ? [...hotel.roomTypes].sort((a, b) => (a.price || 0) - (b.price || 0))
+              : [{ name: '标准间', price: hotel.price }];
+            return roomTypes.map((room, index) => {
+              const isSelected = selectedRoomType && selectedRoomType.name === room.name && selectedRoomType.price === room.price;
+              return (
+                <List.Item
+                  key={index}
+                  className={isSelected ? 'room-type-item selected' : 'room-type-item'}
+                  onClick={() => setSelectedRoomType(room)}
+                  extra={
+                    <div className="room-price">
+                      <span className="price-symbol">¥</span>
+                      <span className="price-value">{room.price}</span>
+                      <span className="price-unit">/晚</span>
+                    </div>
+                  }
+                  arrow={false}
+                >
+                  <div>
+                    <div className="room-type-name">
+                      {room.name}
+                      {isSelected && <CheckCircleFill style={{ marginLeft: 8, color: 'var(--color-primary)' }} />}
+                    </div>
+                    {room.description && (
+                      <div className="room-type-desc">{room.description}</div>
+                    )}
+                  </div>
+                </List.Item>
+              );
+            });
+          })()}
+        </List>
+      </Card>
 
       {/* 设施服务 */}
       {amenities.length > 0 && (
@@ -346,27 +540,26 @@ function HotelDetailPage() {
         </Card>
       )}
 
-      {/* 预订信息 */}
-      <Card className="booking-info-card" title="预订信息">
+      {/* 日历+人间夜 Banner - PDF要求：突出展示 */}
+      <div className="date-nights-banner">
+        <div className="banner-inner">
+          <div className="banner-item" onClick={() => { setDateType('checkIn'); setDatePickerVisible(true); }}>
+            <div className="banner-label">入住</div>
+            <div className="banner-value">{formatDate(checkInDate)}</div>
+          </div>
+          <div className="banner-divider">
+            <span className="nights-badge">{getNightsCount()}晚</span>
+          </div>
+          <div className="banner-item" onClick={() => { setDateType('checkOut'); setDatePickerVisible(true); }}>
+            <div className="banner-label">离店</div>
+            <div className="banner-value">{formatDate(checkOutDate)}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* 预订信息 - 人数与房间 */}
+      <Card className="booking-info-card" title="入住人数与房间">
         <List>
-          <List.Item
-            prefix={<CalendarOutline />}
-            onClick={() => { setDateType('checkIn'); setDatePickerVisible(true); }}
-          >
-            <div className="date-item">
-              <span className="date-label">入住</span>
-              <span className="date-value">{formatDate(checkInDate)}</span>
-            </div>
-          </List.Item>
-          <List.Item
-            prefix={<CalendarOutline />}
-            onClick={() => { setDateType('checkOut'); setDatePickerVisible(true); }}
-          >
-            <div className="date-item">
-              <span className="date-label">离店</span>
-              <span className="date-value">{formatDate(checkOutDate)}</span>
-            </div>
-          </List.Item>
           <List.Item
             prefix={<TeamOutline />}
             extra={
@@ -401,11 +594,13 @@ function HotelDetailPage() {
         <div className="price-info">
           <div className="price-row">
             <span className="price-symbol">¥</span>
-            <span className="price-value">{hotel.price}</span>
-            <span className="price-unit">起/晚</span>
+            <span className="price-value">{selectedRoomType ? getTotalPrice() : '—'}</span>
+            {selectedRoomType && (
+              <span className="selected-room-unit">{selectedRoomType.name} ¥{selectedRoomType.price}/晚</span>
+            )}
           </div>
           <div className="total-price">
-            共{getNightsCount()}晚，总计¥{getTotalPrice()}
+            共{getNightsCount()}晚{selectedRoomType ? `，${roomCount}间，总计¥${getTotalPrice()}` : '，请选择房型'}
           </div>
         </div>
         <Button
@@ -439,6 +634,17 @@ function HotelDetailPage() {
                 <span className="summary-label">酒店</span>
                 <span className="summary-value">{hotel.name}</span>
               </div>
+              {selectedRoomType && (
+                <div className="summary-item">
+                  <span className="summary-label">房型</span>
+                  <span className="summary-value">
+                    {selectedRoomType.name} ¥{selectedRoomType.price}/晚
+                    {selectedRoomType.description && (
+                      <span className="summary-desc"> · {selectedRoomType.description}</span>
+                    )}
+                  </span>
+                </div>
+              )}
               <div className="summary-item">
                 <span className="summary-label">入住日期</span>
                 <span className="summary-value">{formatDate(checkInDate)}</span>
@@ -463,7 +669,7 @@ function HotelDetailPage() {
 
             <div className="price-breakdown">
               <div className="breakdown-item">
-                <span>¥{hotel.price} × {roomCount}间 × {getNightsCount()}晚</span>
+                <span>¥{selectedRoomType?.price || hotel.price} × {roomCount}间 × {getNightsCount()}晚</span>
                 <span>¥{getTotalPrice()}</span>
               </div>
               <div className="breakdown-total">
@@ -486,22 +692,20 @@ function HotelDetailPage() {
         </div>
       </Popup>
 
-      {/* 日期选择器 */}
+      {/* 日期选择器 - 级联年月日 */}
       <Popup
         visible={datePickerVisible}
         onMaskClick={() => setDatePickerVisible(false)}
-        bodyStyle={{ height: '50vh' }}
+        bodyStyle={{ height: '50vh', borderTopLeftRadius: 12, borderTopRightRadius: 12 }}
       >
-        <div className="picker-header">
-          <span className="picker-title">
-            选择{dateType === 'checkIn' ? '入住' : '离店'}日期
-          </span>
-          <Button onClick={() => setDatePickerVisible(false)}>完成</Button>
-        </div>
-        <DatePicker
+        <CascadingDatePicker
+          embedded
+          visible={datePickerVisible}
           value={dateType === 'checkIn' ? checkInDate : checkOutDate}
           onConfirm={handleDateConfirm}
-          min={new Date()}
+          onClose={() => setDatePickerVisible(false)}
+          min={dateType === 'checkIn' ? new Date() : new Date((checkInDate || new Date()).getTime() + 86400000)}
+          title={`选择${dateType === 'checkIn' ? '入住' : '离店'}日期`}
         />
       </Popup>
     </div>

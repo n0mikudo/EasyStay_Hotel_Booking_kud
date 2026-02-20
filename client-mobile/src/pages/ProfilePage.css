@@ -1,0 +1,86 @@
+.profile-page {
+  min-height: 100vh;
+  background: var(--color-bg-page);
+  padding-bottom: calc(60px + env(safe-area-inset-bottom));
+}
+
+.profile-nav {
+  background: var(--gradient-primary);
+  --adm-nav-bar-text-color: #fff;
+}
+
+.profile-nav .nav-title {
+  color: #fff;
+  font-weight: 600;
+}
+
+.profile-header {
+  background: var(--gradient-primary);
+  padding: 40px 20px 32px;
+  text-align: center;
+  color: #fff;
+}
+
+.profile-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+  font-size: 36px;
+}
+
+.profile-name {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.profile-desc {
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+.profile-menu {
+  margin: -16px 16px 0;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+}
+
+.profile-menu .adm-list {
+  --border-inner: 1px solid var(--color-border-light);
+}
+
+/* 深色模式下菜单列表对比度修复：列表使用深色背景 + 浅色文字 */
+[data-theme="dark"] .profile-menu,
+[data-theme="dark"] .profile-menu .adm-list,
+[data-theme="dark"] .profile-menu .adm-list-item,
+[data-theme="dark"] .profile-menu .adm-list-item-content,
+[data-theme="dark"] .profile-menu .adm-list-body {
+  background: var(--color-bg-elevated) !important;
+  color: var(--color-text) !important;
+}
+
+[data-theme="dark"] .profile-menu .adm-list-item-content-main,
+[data-theme="dark"] .profile-menu .adm-list-item-content-arrow,
+[data-theme="dark"] .profile-menu .adm-list-item-content-extra {
+  color: var(--color-text) !important;
+}
+
+[data-theme="dark"] .profile-menu .adm-list {
+  --border-inner: 1px solid var(--color-border);
+}
+
+.profile-footer {
+  text-align: center;
+  padding: 32px;
+}
+
+.version {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
