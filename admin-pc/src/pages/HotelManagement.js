@@ -59,7 +59,9 @@ const amenityOptions = [
 
 function HotelManagement() {
   const [hotels, setHotels] = useState([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [searchInput, setSearchInput] = useState('');
   const [searchKeyword, setSearchKeyword] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [editModalVisible, setEditModalVisible] = useState(false);
@@ -69,20 +71,29 @@ function HotelManagement() {
   const [viewingHotel, setViewingHotel] = useState(null);
   const [form] = Form.useForm();
 
-  // 组件挂载时获取数据
   useEffect(() => {
     fetchHotels();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pagination.current, pagination.pageSize, searchKeyword, statusFilter]);
 
-  /**
-   * 获取所有酒店数据
-   */
   const fetchHotels = async () => {
     try {
       setLoading(true);
-      const response = await hotelService.getHotels();
+      const params = {
+        page: pagination.current,
+        limit: pagination.pageSize,
+        brief: 'true'
+      };
+      if (searchKeyword && searchKeyword.trim()) {
+        params.keyword = searchKeyword.trim();
+      }
+      if (statusFilter) {
+        params.status = statusFilter;
+      }
+      const response = await hotelService.getHotels(params);
       if (response.data.success) {
         setHotels(response.data.data);
+        setTotal(response.data.total || response.data.count || 0);
       }
     } catch (error) {
       message.error('获取数据失败，请稍后重试');
@@ -175,17 +186,7 @@ function HotelManagement() {
     return <Tag color={config.color}>{config.text}</Tag>;
   };
 
-  /**
-   * 过滤酒店数据
-   */
-  const filteredHotels = hotels.filter(hotel => {
-    const matchKeyword = !searchKeyword ||
-      hotel.name.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-      hotel.city.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-      hotel.address.toLowerCase().includes(searchKeyword.toLowerCase());
-    const matchStatus = !statusFilter || hotel.status === statusFilter;
-    return matchKeyword && matchStatus;
-  });
+  const filteredHotels = hotels;
 
   /**
    * 表格列定义
@@ -312,7 +313,7 @@ function HotelManagement() {
           <div>
             <h1 className="page-title">🏨 酒店管理</h1>
             <p className="page-subtitle">
-              共管理 <Badge count={hotels.length} showZero color="#1890ff" /> 家酒店
+              共管理 <Badge count={total} showZero color="#1890ff" /> 家酒店
             </p>
           </div>
           <Button
@@ -333,8 +334,10 @@ function HotelManagement() {
             <Input.Search
               placeholder="搜索酒店名称、城市或地址"
               allowClear
-              onSearch={setSearchKeyword}
-              onChange={(e) => setSearchKeyword(e.target.value)}
+              value={searchInput}
+              onSearch={(val) => { setSearchKeyword(val); setPagination(prev => ({ ...prev, current: 1 })); }}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onClear={() => { setSearchInput(''); setSearchKeyword(''); setPagination(prev => ({ ...prev, current: 1 })); }}
               style={{ width: 320 }}
               prefix={<SearchOutlined />}
               className="search-input"
@@ -363,10 +366,11 @@ function HotelManagement() {
           pagination={{
             current: pagination.current,
             pageSize: pagination.pageSize,
+            total: total,
             pageSizeOptions: ['10', '20', '50', '100'],
             showSizeChanger: true,
             showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 条记录`,
+            showTotal: (t) => `共 ${t} 条记录`,
             onChange: (page, pageSize) => setPagination({ current: page, pageSize })
           }}
           scroll={{ x: 1300 }}

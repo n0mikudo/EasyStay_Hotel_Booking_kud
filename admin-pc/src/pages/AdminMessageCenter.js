@@ -20,7 +20,6 @@ import {
   Spin,
   Typography,
   Button,
-  Modal,
   Popconfirm,
   message
 } from 'antd';

@@ -11,9 +11,9 @@
 
 import React, { useEffect, useState } from 'react';
 import { Card, Row, Col, Statistic, Button, message } from 'antd';
-import { BarChartOutlined, PieChartOutlined, LineChartOutlined, DownloadOutlined } from '@ant-design/icons';
+import { BarChartOutlined, DownloadOutlined } from '@ant-design/icons';
 import ReactECharts from 'echarts-for-react';
-import { statsService, hotelService } from '../services/api';
+import { statsService } from '../services/api';
 
 function AdminAnalytics() {
   const [stats, setStats] = useState({
@@ -21,10 +21,12 @@ function AdminAnalytics() {
     pending: 0,
     approved: 0,
     rejected: 0,
+    offline: 0,
     avgPrice: 0,
-    cities: 0
+    cities: 0,
+    priceRanges: [],
+    cityTop8: []
   });
-  const [hotels, setHotels] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -34,15 +36,9 @@ function AdminAnalytics() {
   const loadStats = async () => {
     try {
       setLoading(true);
-      const [statsRes, hotelsRes] = await Promise.all([
-        statsService.getStats(),
-        hotelService.getHotels()
-      ]);
-      if (statsRes.data.success) {
-        setStats(statsRes.data.data);
-      }
-      if (hotelsRes.data.success) {
-        setHotels(hotelsRes.data.data || []);
+      const res = await statsService.getAnalytics();
+      if (res.data.success) {
+        setStats(res.data.data);
       }
     } catch (error) {
       message.error('加载统计数据失败');
@@ -65,22 +61,12 @@ function AdminAnalytics() {
         { value: stats.pending, name: '待审核' },
         { value: stats.approved, name: '已通过' },
         { value: stats.rejected, name: '已拒绝' },
-        { value: (stats.total || 0) - stats.pending - stats.approved - stats.rejected, name: '已下线' }
+        { value: stats.offline || 0, name: '已下线' }
       ].filter(d => d.value > 0)
     }]
   };
 
-  const priceRanges = [
-    { min: 0, max: 200, name: '¥200以下', count: 0 },
-    { min: 200, max: 500, name: '¥200-500', count: 0 },
-    { min: 500, max: 1000, name: '¥500-1000', count: 0 },
-    { min: 1000, max: Infinity, name: '¥1000+', count: 0 }
-  ];
-  hotels.forEach(h => {
-    const p = h.price || 0;
-    const r = priceRanges.find(x => p >= x.min && p < x.max);
-    if (r) r.count++;
-  });
+  const priceRanges = stats.priceRanges || [];
 
   const barOption = {
     tooltip: { trigger: 'axis' },
@@ -102,20 +88,15 @@ function AdminAnalytics() {
     }]
   };
 
-  const cityCount = {};
-  hotels.forEach(h => {
-    const c = h.city || '未知';
-    cityCount[c] = (cityCount[c] || 0) + 1;
-  });
-  const cityData = Object.entries(cityCount).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  const cityData = stats.cityTop8 || [];
 
   const lineOption = {
     tooltip: { trigger: 'axis' },
-    xAxis: { type: 'category', data: cityData.map(([c]) => c) },
+    xAxis: { type: 'category', data: cityData.map(d => d.city) },
     yAxis: { type: 'value', name: '酒店数' },
     series: [{
       type: 'line',
-      data: cityData.map(([, n]) => n),
+      data: cityData.map(d => d.count),
       smooth: true,
       areaStyle: { opacity: 0.3 },
       lineStyle: { width: 2 },

@@ -10,15 +10,14 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { Card, Row, Col, Statistic, Button, List, Tag, Space } from 'antd';
+import { Card, Row, Col, Statistic, Button, List, Tag } from 'antd';
 import {
   HomeOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
   PlusOutlined,
   ArrowRightOutlined,
-  BarChartOutlined,
-  DollarOutlined
+  BarChartOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { hotelService } from '../services/api';
@@ -57,6 +56,7 @@ function MerchantDashboard() {
     } else if (user === null && localStorage.getItem('user') === null) {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const loadData = async () => {

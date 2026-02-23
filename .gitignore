@@ -6,7 +6,7 @@ node_modules/
 build/
 dist/
 
-# Environment variables (keep .env.production as template)
+# Environment variables (keep .env.production for deployment)
 .env
 .env.local
 .env.development.local
@@ -25,6 +25,7 @@ server/.env
 Thumbs.db
 
 # Logs
+logs/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -55,6 +56,27 @@ server/data/backups/
 .next/
 .nuxt/
 
-# Documents (optional, uncomment if you want to exclude)
+# Documents & images
 *.pdf
 *.docx
+*.png
+
+# Markdown docs (keep README and project manual only)
+*.md
+!README.md
+!项目手册.md
+
+# Knowledge base output
+kb_output/
+
+# Non-essential scripts
+quick-verify.sh
+rebuild-admin.sh
+upload-to-server.bat
+server/test-*.js
+
+# Data update docs
+酒店数据更新/
+
+# Root package-lock (not a real root project)
+/package-lock.json

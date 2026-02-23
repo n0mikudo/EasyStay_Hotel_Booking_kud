@@ -11,14 +11,15 @@
 
 .profile-nav .nav-title {
   color: #fff;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 .profile-header {
-  background: var(--gradient-primary);
-  padding: 40px 20px 32px;
+  background: var(--gradient-hero);
+  padding: 40px var(--spacing-xl) var(--spacing-3xl);
   text-align: center;
   color: #fff;
+  border-radius: 0 0 var(--radius-2xl) var(--radius-2xl);
 }
 
 .profile-avatar {
@@ -31,6 +32,12 @@
   justify-content: center;
   margin: 0 auto 16px;
   font-size: 36px;
+}
+
+.profile-avatar-text {
+  font-size: 28px;
+  font-weight: var(--font-weight-bold);
+  color: #fff;
 }
 
 .profile-name {

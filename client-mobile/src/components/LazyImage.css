@@ -8,7 +8,7 @@
 .lazy-image-placeholder {
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, #F1F5F9 25%, #E2E8F0 50%, #F1F5F9 75%);
+  background: linear-gradient(90deg, var(--color-bg-muted) 25%, var(--color-border) 50%, var(--color-bg-muted) 75%);
   background-size: 200% 100%;
   animation: lazy-shimmer 1.5s ease-in-out infinite;
   display: flex;
@@ -23,7 +23,7 @@
 
 .lazy-placeholder-icon {
   font-size: 32px;
-  opacity: 0.5;
+  opacity: 0.4;
 }
 
 .lazy-image-img {
@@ -32,7 +32,7 @@
   width: 100%;
   height: 100%;
   opacity: 0;
-  transition: opacity 0.3s ease;
+  transition: opacity var(--transition-normal);
 }
 
 .lazy-image-img.loaded {

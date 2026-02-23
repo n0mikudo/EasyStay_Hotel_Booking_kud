@@ -12,7 +12,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { Card, Row, Col, Statistic, Button, List, Tag, Progress, Badge, Avatar, Space } from 'antd';
+import { Card, Row, Col, Statistic, Button, List, Tag, Progress, Badge, Avatar } from 'antd';
 import {
   HomeOutlined,
   CheckCircleOutlined,
@@ -27,7 +27,6 @@ import {
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { statsService, hotelService, activityService } from '../services/api';
-import NotificationDropdown from '../components/NotificationDropdown';
 import './Dashboard.css';
 
 function AdminDashboard({ user }) {
@@ -46,16 +45,17 @@ function AdminDashboard({ user }) {
     audits: 0
   });
 
+  const isFirstLoad = React.useRef(true);
+
   useEffect(() => {
     loadData();
-    // 模拟实时数据更新
-    const interval = setInterval(loadData, 30000);
+    const interval = setInterval(loadData, 120000);
     return () => clearInterval(interval);
   }, []);
 
   const loadData = async () => {
     try {
-      setLoading(true);
+      if (isFirstLoad.current) setLoading(true);
       // 获取统计数据
       const statsRes = await statsService.getStats();
       if (statsRes.data.success) {
@@ -96,32 +96,19 @@ function AdminDashboard({ user }) {
         setRecentActivities(processedActivities);
       }
 
-      // 计算今日数据
-      const allHotelsRes = await hotelService.getHotels();
-      if (allHotelsRes.data.success) {
-        const allHotels = allHotelsRes.data.data;
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        
-        // 今日新增酒店数量
-        const newHotels = allHotels.filter(hotel => {
-          const createdAt = new Date(hotel.createdAt);
-          return createdAt >= today;
-        }).length;
-        
-        // 今日审核次数
-        const audits = allHotels.filter(hotel => {
-          const updatedAt = new Date(hotel.updatedAt);
-          const isStatusChange = hotel.status === 'approved' || hotel.status === 'rejected';
-          return updatedAt >= today && isStatusChange;
-        }).length;
-        
-        setTodayStats({ newHotels, audits });
+      // 今日数据已由 stats 接口返回
+      if (statsRes.data.success) {
+        const s = statsRes.data.data;
+        setTodayStats({
+          newHotels: s.todayNewHotels || 0,
+          audits: s.todayAudits || 0
+        });
       }
     } catch (error) {
       console.error('加载数据失败:', error);
     } finally {
       setLoading(false);
+      isFirstLoad.current = false;
     }
   };
 

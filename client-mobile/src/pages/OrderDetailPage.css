@@ -16,7 +16,7 @@
 }
 
 .order-detail-content {
-  padding: 16px;
+  padding: var(--spacing-lg);
 }
 
 .order-status-card {
@@ -124,6 +124,6 @@
 }
 
 .total-amount {
-  color: var(--color-accent);
-  font-size: 20px;
+  color: var(--color-price);
+  font-size: var(--font-size-2xl);
 }

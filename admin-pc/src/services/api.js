@@ -21,7 +21,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json'
   },
-  timeout: 10000 // 10秒超时
+  timeout: 60000
 });
 
 /**
@@ -144,7 +144,11 @@ export const hotelService = {
    * @returns {Promise} 请求Promise
    */
   auditHotel: (id, status, rejectReason = '', adminInfo = {}) =>
-    api.put(`/hotels/${id}/status`, { status, rejectReason, adminId: adminInfo.id, adminUsername: adminInfo.username })
+    api.put(`/hotels/${id}/status`, { status, rejectReason, adminId: adminInfo.id, adminUsername: adminInfo.username }),
+
+  auditDismiss: (id) => api.put(`/hotels/${id}/audit-dismiss`),
+
+  batchAuditDismiss: (ids) => api.post('/hotels/batch-audit-dismiss', { ids })
 };
 
 /**
@@ -155,7 +159,13 @@ export const statsService = {
    * 获取统计数据
    * @returns {Promise} 请求Promise
    */
-  getStats: () => api.get('/stats')
+  getStats: () => api.get('/stats'),
+
+  /**
+   * 获取分析报表数据（服务端预计算，避免传输全部酒店数据）
+   * @returns {Promise} 请求Promise
+   */
+  getAnalytics: () => api.get('/stats/analytics')
 };
 
 /**

@@ -23,7 +23,7 @@
 }
 
 .order-content {
-  padding: 16px;
+  padding: var(--spacing-lg);
 }
 
 .order-empty {
@@ -33,7 +33,7 @@
 .order-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--spacing-md);
 }
 
 .order-card {
@@ -95,7 +95,7 @@
 }
 
 .order-total {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--color-accent);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-price);
 }

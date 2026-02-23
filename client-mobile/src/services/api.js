@@ -44,7 +44,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json'
   },
-  timeout: 10000 // 10秒超时
+  timeout: 60000
 });
 
 /**
@@ -139,6 +139,28 @@ export const bookingService = {
    * @returns {Promise} 请求Promise
    */
   cancelBooking: (id) => api.patch(`/bookings/${id}/cancel`)
+};
+
+export const chatService = {
+  getApiBaseUrl: () => {
+    if (process.env.REACT_APP_API_URL) return process.env.REACT_APP_API_URL;
+    const hostname = window.location.hostname;
+    if (hostname === 'localhost' || hostname === '127.0.0.1') return 'http://localhost:3000/api';
+    return `http://${hostname}:3000/api`;
+  }
+};
+
+export const clientAuthService = {
+  login: (phone, code) => api.post('/client/auth/login', { phone, code }),
+  getProfile: (uid) => api.get('/client/auth/profile', { headers: { 'x-client-uid': uid } }),
+  updateProfile: (uid, nickname) => api.put('/client/auth/profile', { nickname }, { headers: { 'x-client-uid': uid } }),
+};
+
+export const chatSessionService = {
+  getSessions: (userId) => api.get('/client/chat/sessions', { params: { user_id: userId } }),
+  createSession: (userId, mode) => api.post('/client/chat/sessions', { user_id: userId, mode }),
+  getSession: (sessionId) => api.get(`/client/chat/sessions/${sessionId}`),
+  deleteSession: (sessionId) => api.delete(`/client/chat/sessions/${sessionId}`),
 };
 
 export default api;

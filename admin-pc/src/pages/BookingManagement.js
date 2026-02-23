@@ -17,6 +17,7 @@ function BookingManagement({ user: userProp }) {
 
   useEffect(() => {
     loadBookings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, user?.role]);
 
   const loadBookings = async () => {

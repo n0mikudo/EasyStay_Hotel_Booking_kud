@@ -17,6 +17,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const compression = require('compression');
 const bodyParser = require('body-parser');
 const fs = require('fs');
 const path = require('path');
@@ -27,6 +28,7 @@ const app = express();
 const PORT = 3000;
 
 // 中间件配置
+app.use(compression());
 app.use(cors());
 app.use(bodyParser.json());
 
@@ -38,6 +40,8 @@ const BOOKINGS_FILE = path.join(__dirname, 'data', 'bookings.json');
 const INVITE_CODES_FILE = path.join(__dirname, 'data', 'invite_codes.json');
 const CONFIG_FILE = path.join(__dirname, 'data', 'system_config.json');
 const LOGS_FILE = path.join(__dirname, 'data', 'system_logs.json');
+const CLIENT_USERS_FILE = path.join(__dirname, 'data', 'client_users.json');
+const CHAT_SESSIONS_FILE = path.join(__dirname, 'data', 'chat_sessions.json');
 
 /**
  * 初始化数据文件
@@ -82,9 +86,18 @@ const initDataFile = () => {
   if (!fs.existsSync(LOGS_FILE)) {
     fs.writeFileSync(LOGS_FILE, JSON.stringify([], null, 2));
   }
+  if (!fs.existsSync(CLIENT_USERS_FILE)) {
+    fs.writeFileSync(CLIENT_USERS_FILE, JSON.stringify([], null, 2));
+  }
+  if (!fs.existsSync(CHAT_SESSIONS_FILE)) {
+    fs.writeFileSync(CHAT_SESSIONS_FILE, JSON.stringify([], null, 2));
+  }
 };
 
 initDataFile();
+
+// ==================== 内存缓存层 ====================
+// 所有数据在内存中维护，读操作 ~0ms；写操作更新内存后异步落盘，合并高频写入
 
 /**
  * 系统配置读写
@@ -185,119 +198,172 @@ const generateInviteCode = () => {
   return code;
 };
 
-/**
- * 读取用户数据
- */
-const readUsers = () => {
-  try {
-    if (!fs.existsSync(USERS_FILE)) {
-      return [];
+// ==================== 内存缓存层 ====================
+// 所有数据在内存中维护，读操作 ~0ms；写操作更新内存后异步落盘，合并高频写入
+
+const _cache = {
+  hotels: null,
+  users: null,
+  messages: null,
+  bookings: null,
+  clientUsers: null,
+  chatSessions: null
+};
+
+const _writePending = {};
+
+function _scheduleFlush(key, filePath, serialize) {
+  if (_writePending[key]) return;
+  _writePending[key] = true;
+  setImmediate(() => {
+    _writePending[key] = false;
+    const data = _cache[key];
+    if (data === null) return;
+    try {
+      const json = serialize ? serialize(data) : JSON.stringify(data, null, 2);
+      fs.writeFile(filePath, json, (err) => {
+        if (err) console.error(`写入 ${key} 失败:`, err);
+      });
+    } catch (e) {
+      console.error(`序列化 ${key} 失败:`, e);
     }
-    const data = fs.readFileSync(USERS_FILE, 'utf8');
-    const parsed = JSON.parse(data);
-    return parsed.users || [];
+  });
+}
+
+const readHotels = () => {
+  if (_cache.hotels) return _cache.hotels;
+  try {
+    const data = fs.readFileSync(DATA_FILE, 'utf8');
+    _cache.hotels = JSON.parse(data);
+  } catch (error) {
+    console.error('读取酒店数据失败:', error);
+    _cache.hotels = [];
+  }
+  return _cache.hotels;
+};
+
+const writeHotels = (hotels) => {
+  _cache.hotels = hotels;
+  _scheduleFlush('hotels', DATA_FILE);
+};
+
+const readUsers = () => {
+  if (_cache.users) return _cache.users;
+  try {
+    if (!fs.existsSync(USERS_FILE)) return (_cache.users = []);
+    const parsed = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
+    _cache.users = parsed.users || [];
   } catch (error) {
     console.error('读取用户数据失败:', error);
-    return [];
+    _cache.users = [];
   }
+  return _cache.users;
 };
 
-/**
- * 写入用户数据
- */
 const writeUsers = (users) => {
-  try {
-    fs.writeFileSync(USERS_FILE, JSON.stringify({ users }, null, 2));
-    return true;
-  } catch (error) {
-    console.error('写入用户数据失败:', error);
-    return false;
-  }
+  _cache.users = users;
+  _scheduleFlush('users', USERS_FILE, (d) => JSON.stringify({ users: d }, null, 2));
+  return true;
 };
 
-/**
- * 生成用户ID
- */
+const readMessages = () => {
+  if (_cache.messages) return _cache.messages;
+  try {
+    if (!fs.existsSync(MESSAGES_FILE)) return (_cache.messages = []);
+    _cache.messages = JSON.parse(fs.readFileSync(MESSAGES_FILE, 'utf8'));
+  } catch (error) {
+    console.error('读取消息数据失败:', error);
+    _cache.messages = [];
+  }
+  return _cache.messages;
+};
+
+const writeMessages = (messages) => {
+  _cache.messages = messages;
+  _scheduleFlush('messages', MESSAGES_FILE);
+  return true;
+};
+
+const readBookings = () => {
+  if (_cache.bookings) return _cache.bookings;
+  try {
+    if (!fs.existsSync(BOOKINGS_FILE)) return (_cache.bookings = []);
+    _cache.bookings = JSON.parse(fs.readFileSync(BOOKINGS_FILE, 'utf8'));
+  } catch (error) {
+    console.error('读取预订数据失败:', error);
+    _cache.bookings = [];
+  }
+  return _cache.bookings;
+};
+
+const writeBookings = (bookings) => {
+  _cache.bookings = bookings;
+  _scheduleFlush('bookings', BOOKINGS_FILE);
+  return true;
+};
+
+const readClientUsers = () => {
+  if (_cache.clientUsers) return _cache.clientUsers;
+  try {
+    if (!fs.existsSync(CLIENT_USERS_FILE)) return (_cache.clientUsers = []);
+    _cache.clientUsers = JSON.parse(fs.readFileSync(CLIENT_USERS_FILE, 'utf8'));
+  } catch (error) {
+    console.error('读取客户端用户数据失败:', error);
+    _cache.clientUsers = [];
+  }
+  return _cache.clientUsers;
+};
+
+const writeClientUsers = (users) => {
+  _cache.clientUsers = users;
+  _scheduleFlush('clientUsers', CLIENT_USERS_FILE);
+  return true;
+};
+
+const readChatSessions = () => {
+  if (_cache.chatSessions) return _cache.chatSessions;
+  try {
+    if (!fs.existsSync(CHAT_SESSIONS_FILE)) return (_cache.chatSessions = []);
+    _cache.chatSessions = JSON.parse(fs.readFileSync(CHAT_SESSIONS_FILE, 'utf8'));
+  } catch (error) {
+    console.error('读取聊天会话数据失败:', error);
+    _cache.chatSessions = [];
+  }
+  return _cache.chatSessions;
+};
+
+const writeChatSessions = (sessions) => {
+  _cache.chatSessions = sessions;
+  _scheduleFlush('chatSessions', CHAT_SESSIONS_FILE);
+  return true;
+};
+
+// 启动预热：服务启动时将所有数据加载到内存
+const warmUpCache = () => {
+  const t = Date.now();
+  readHotels();
+  readUsers();
+  readMessages();
+  readBookings();
+  readClientUsers();
+  readChatSessions();
+  console.log(`缓存预热完成: hotels=${_cache.hotels.length}, users=${_cache.users.length}, messages=${_cache.messages.length}, bookings=${_cache.bookings.length}, clientUsers=${_cache.clientUsers.length}, chatSessions=${_cache.chatSessions.length} (${Date.now() - t}ms)`);
+};
+
+warmUpCache();
+
 const generateUserId = () => {
   return 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 };
 
-/**
- * 读取消息数据
- */
-const readMessages = () => {
-  try {
-    if (!fs.existsSync(MESSAGES_FILE)) {
-      return [];
-    }
-    const data = fs.readFileSync(MESSAGES_FILE, 'utf8');
-    return JSON.parse(data);
-  } catch (error) {
-    console.error('读取消息数据失败:', error);
-    return [];
-  }
-};
-
-/**
- * 写入消息数据
- */
-const writeMessages = (messages) => {
-  try {
-    fs.writeFileSync(MESSAGES_FILE, JSON.stringify(messages, null, 2));
-    return true;
-  } catch (error) {
-    console.error('写入消息数据失败:', error);
-    return false;
-  }
-};
-
-/**
- * 生成消息ID
- */
 const generateMessageId = () => {
   return 'message_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 };
 
-/**
- * 读取预订数据
- */
-const readBookings = () => {
-  try {
-    if (!fs.existsSync(BOOKINGS_FILE)) {
-      return [];
-    }
-    const data = fs.readFileSync(BOOKINGS_FILE, 'utf8');
-    return JSON.parse(data);
-  } catch (error) {
-    console.error('读取预订数据失败:', error);
-    return [];
-  }
-};
-
-/**
- * 写入预订数据
- */
-const writeBookings = (bookings) => {
-  try {
-    fs.writeFileSync(BOOKINGS_FILE, JSON.stringify(bookings, null, 2));
-    return true;
-  } catch (error) {
-    console.error('写入预订数据失败:', error);
-    return false;
-  }
-};
-
-/**
- * 生成预订ID
- */
 const generateBookingId = () => {
   return 'booking_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 };
 
-/**
- * 创建消息通知
- * @param {Object} opts - { title, content, recipientRole, recipientId, actionType, linkTo, targetHotelId, targetMerchantId }
- */
 const createMessage = (title, content, recipientRole, recipientId = null, opts = {}) => {
   const message = {
     id: generateMessageId(),
@@ -321,32 +387,6 @@ const createMessage = (title, content, recipientRole, recipientId = null, opts =
   messages.push(message);
   writeMessages(messages);
   return message;
-};
-
-/**
- * 读取酒店数据
- * @returns {Array} 酒店列表
- */
-const readHotels = () => {
-  try {
-    const data = fs.readFileSync(DATA_FILE, 'utf8');
-    return JSON.parse(data);
-  } catch (error) {
-    console.error('读取数据失败:', error);
-    return [];
-  }
-};
-
-/**
- * 写入酒店数据
- * @param {Array} hotels - 酒店列表
- */
-const writeHotels = (hotels) => {
-  try {
-    fs.writeFileSync(DATA_FILE, JSON.stringify(hotels, null, 2));
-  } catch (error) {
-    console.error('写入数据失败:', error);
-  }
 };
 
 /**
@@ -426,32 +466,38 @@ app.get('/api/hotels', (req, res) => {
   try {
     const hotels = readHotels();
     const { status, keyword, sortBy = 'createdAt', order = 'desc', userId, city, star, price, tags, page = 1, limit } = req.query;
-
+    
     let filteredHotels = hotels;
-
+    
     // 按用户ID筛选（商户只能看到自己的酒店）
     if (userId) {
       filteredHotels = filteredHotels.filter(h => h.userId === userId);
     }
-
-    // 按状态筛选
+    
+    // 按状态筛选（支持逗号分隔多状态，如 status=approved,offline）
     if (status) {
-      filteredHotels = filteredHotels.filter(h => h.status === status);
+      const statuses = status.split(',').map(s => s.trim()).filter(Boolean);
+      if (statuses.length === 1) {
+        filteredHotels = filteredHotels.filter(h => h.status === statuses[0]);
+      } else if (statuses.length > 1) {
+        const statusSet = new Set(statuses);
+        filteredHotels = filteredHotels.filter(h => statusSet.has(h.status));
+      }
     }
-
+    
     // 按城市筛选
     if (city && city.trim()) {
-      filteredHotels = filteredHotels.filter(h =>
+      filteredHotels = filteredHotels.filter(h => 
         (h.city && h.city.includes(city)) || (h.address && h.address.includes(city))
       );
     }
-
+    
     // 按星级筛选
     if (star && star !== '') {
       const starNum = parseInt(star);
       filteredHotels = filteredHotels.filter(h => (h.rating || 0) >= starNum);
     }
-
+    
     // 按价格区间筛选
     if (price && price !== '') {
       if (price === '0-200') {
@@ -464,7 +510,7 @@ app.get('/api/hotels', (req, res) => {
         filteredHotels = filteredHotels.filter(h => (h.price || 0) >= 1000);
       }
     }
-
+    
     // 按快捷标签筛选（模糊匹配：tags、amenities、description 任一包含关键词即可）
     if (tags && tags.trim()) {
       const tagList = tags.split(',').map(t => t.trim()).filter(Boolean);
@@ -486,26 +532,59 @@ app.get('/api/hotels', (req, res) => {
         });
       }
     }
-
+    
     // 智能关键词搜索：同义词扩展 + 语义优先（设施/标签优先于名称）
     if (keyword && keyword.trim()) {
       const raw = keyword.trim();
       const KEYWORD_SYNONYMS = {
-        '停车场': ['停车', '免费停车', '停车场'],
-        '停车': ['停车', '免费停车'],
+        '停车场': ['停车', '免费停车', '停车场', '收费停车', '代客泊车'],
+        '停车': ['停车', '免费停车', '收费停车', '代客泊车'],
+        '充电': ['充电', '充电桩', '新能源充电桩'],
         '海景': ['海景', '海景房', '景观'],
         '海景房': ['海景', '海景房'],
         '海': ['海景', '海景房'],
-        '早餐': ['早餐', '含早餐', '餐厅'],
+        '早餐': ['早餐', '含早餐', '自助早餐', '餐厅'],
+        '含早': ['含早餐', '自助早餐', '早餐'],
         '地铁': ['地铁', '近地铁'],
-        '机场': ['机场', '近机场'],
+        '机场': ['机场', '近机场', '机场接送', '机场附近'],
         '景区': ['景区', '近景区'],
-        '亲子': ['亲子', '亲子游', '儿童'],
-        '儿童': ['儿童', '儿童乐园', '亲子'],
-        '泳池': ['泳池', '游泳池'],
+        '亲子': ['亲子', '亲子游', '儿童', '儿童乐园', '儿童泳池'],
+        '儿童': ['儿童', '儿童乐园', '亲子', '亲子游', '儿童泳池'],
+        '泳池': ['泳池', '游泳池', '室内泳池', '室外泳池', '无边泳池', '儿童泳池'],
+        '游泳': ['游泳', '游泳池', '室内泳池', '室外泳池', '无边泳池'],
         '健身': ['健身', '健身房'],
-        'wifi': ['wifi', 'wifi', '免费wifi', '免费WiFi'],
-        '免费wifi': ['wifi', '免费wifi', '免费WiFi']
+        'wifi': ['wifi', '免费wifi', '免费WiFi'],
+        '免费wifi': ['wifi', '免费wifi', '免费WiFi'],
+        '浴缸': ['浴缸', '浴室', '浴袍'],
+        '温泉': ['温泉', '泡温泉', '温泉池', '露天温泉'],
+        '接送': ['接送', '机场接送', '接送服务'],
+        '棋牌': ['棋牌', '棋牌室', '麻将'],
+        '茶': ['茶室', '大堂茶饮', '茶'],
+        '阅读': ['阅读', '阅读空间', '书吧'],
+        '厨房': ['厨房', '共享厨房', '自助厨房'],
+        '酒廊': ['酒廊', '行政酒廊'],
+        '网红': ['网红', '网红打卡'],
+        '花园': ['花园', '露台', '花园/露台'],
+        '安静': ['安静', '安静舒适', '隔音', '隔音客房'],
+        '隔音': ['隔音', '隔音客房', '安静'],
+        '夜景': ['夜景', '夜景绝佳'],
+        '设计师': ['设计师', '设计师酒店'],
+        '商务': ['商务', '商务出行', '商务中心', '会议室'],
+        '会议': ['会议', '会议室', '会议会展', '多功能厅'],
+        'SPA': ['SPA', 'SPA水疗', '水疗'],
+        '水疗': ['水疗', 'SPA水疗', 'SPA'],
+        '管家': ['管家', '管家服务'],
+        '民宿': ['民宿', '温馨民宿', '民宿客栈'],
+        '度假': ['度假', '度假村', '休闲度假'],
+        '情侣': ['情侣', '情侣蜜月'],
+        '酒吧': ['酒吧', '大堂吧', '天台酒吧'],
+        '咖啡': ['咖啡', '咖啡厅'],
+        '瑜伽': ['瑜伽', '瑜伽室'],
+        'KTV': ['KTV', '棋牌室'],
+        '洗衣': ['洗衣', '洗衣服务'],
+        '湖景': ['湖景', '湖'],
+        '山景': ['山景', '山'],
+        '江景': ['江景', '江']
       };
       const expand = (kw) => {
         const keys = Object.keys(KEYWORD_SYNONYMS).sort((a, b) => b.length - a.length);
@@ -524,6 +603,43 @@ app.get('/api/hotels', (req, res) => {
         return inTags || inAmenities || inDesc || inCity || inAddress || inName;
       });
     }
+    
+    // 排除已归档的审核条目
+    if (req.query.excludeAuditArchived === 'true') {
+      filteredHotels = filteredHotels.filter(h => !h.auditArchived);
+    }
+
+    // 审核列表专用搜索（按字段精确匹配）
+    const { searchType, searchValue } = req.query;
+    if (searchValue && searchValue.trim() && searchType) {
+      const sv = searchValue.trim().toLowerCase();
+      switch (searchType) {
+        case 'name':
+          filteredHotels = filteredHotels.filter(h => (h.name || '').toLowerCase().includes(sv));
+          break;
+        case 'city':
+          filteredHotels = filteredHotels.filter(h => (h.city || '').toLowerCase().includes(sv));
+          break;
+        case 'auditBy':
+          filteredHotels = filteredHotels.filter(h => {
+            const ab = h.auditBy || ((h.status === 'approved' || h.status === 'rejected') ? '系统管理员' : '');
+            return ab.toLowerCase().includes(sv);
+          });
+          break;
+        case 'owner': {
+          const allUsers = readUsers();
+          const userMap = {};
+          allUsers.forEach(u => { userMap[u.id] = u; });
+          filteredHotels = filteredHotels.filter(h => {
+            const u = userMap[h.userId];
+            return u && ((u.name || '').toLowerCase().includes(sv) || (u.username || '').toLowerCase().includes(sv));
+          });
+          break;
+        }
+        default:
+          break;
+      }
+    }
 
     // 排序：支持 sort 参数 (default|price_asc|price_desc|rating)
     const sortParam = req.query.sort || sortBy;
@@ -541,9 +657,9 @@ app.get('/api/hotels', (req, res) => {
         return aVal < bVal ? 1 : -1;
       });
     }
-
+    
     const total = filteredHotels.length;
-
+    
     // 分页
     let resultHotels = filteredHotels;
     if (limit) {
@@ -552,10 +668,19 @@ app.get('/api/hotels', (req, res) => {
       const start = (pageNum - 1) * limitNum;
       resultHotels = filteredHotels.slice(start, start + limitNum);
     }
+    
+    const BRIEF_FIELDS = ['id','name','city','province','district','address','price','rating','status','createdAt','updatedAt','userId','auditBy','auditAt','auditArchived','phone'];
+    const outputHotels = req.query.brief === 'true'
+      ? resultHotels.map(h => {
+          const o = {};
+          for (const k of BRIEF_FIELDS) if (h[k] !== undefined) o[k] = h[k];
+          return o;
+        })
+      : resultHotels;
 
     res.json({
       success: true,
-      data: resultHotels,
+      data: outputHotels,
       count: total,
       total: total
     });
@@ -584,8 +709,16 @@ app.get('/api/hotels/hot-tags', (req, res) => {
         if (a && String(a).trim()) count[a] = (count[a] || 0) + 1;
       }
     }
+    const totalHotels = hotels.length;
+    const BASIC_EXCLUDE = new Set([
+      '免费WiFi', '空调', '暖气', '有线电视', '电热水壶', '独立卫浴',
+      '吹风机', '一次性洗漱用品', '拖鞋', '衣架', '书桌', '穿衣镜',
+      '电梯', '行李寄存', '遮光窗帘', '每日客房清洁', '浴袍',
+      '24小时前台', '叫醒服务'
+    ]);
     const limit = Math.min(20, Math.max(6, parseInt(req.query.limit) || 8));
     const tags = Object.entries(count)
+      .filter(([label, v]) => !BASIC_EXCLUDE.has(label) && v < totalHotels * 0.8)
       .sort((a, b) => b[1] - a[1])
       .slice(0, limit)
       .map(([label]) => ({ label, value: label }));
@@ -603,14 +736,14 @@ app.get('/api/hotels/:id', (req, res) => {
   try {
     const hotels = readHotels();
     const hotel = hotels.find(h => h.id === req.params.id);
-
+    
     if (!hotel) {
       return res.status(404).json({
         success: false,
         message: '酒店不存在'
       });
     }
-
+    
     // 检查用户权限（商户只能查看自己的酒店）
     const { userId } = req.query;
     if (userId && hotel.userId !== userId) {
@@ -619,10 +752,24 @@ app.get('/api/hotels/:id', (req, res) => {
         message: '无权访问该酒店信息'
       });
     }
+    
+    const baseScore = parseFloat(hotel.baiduOverallRating) || hotel.rating || 3.0;
+    const hash = (hotel.id || '').split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+    const clamp = (v) => +(Math.max(1, Math.min(5, v))).toFixed(1);
+    const enriched = {
+      ...hotel,
+      scores: {
+        environment: clamp(baseScore + ((hash % 7 - 3) * 0.1)),
+        service:     clamp(baseScore + ((hash % 11 - 5) * 0.08)),
+        facility:    clamp(baseScore + ((hash % 13 - 6) * 0.12))
+      },
+      baiduRating: hotel.baiduOverallRating ? parseFloat(hotel.baiduOverallRating) : null,
+      commentCount: hotel.baiduCommentNum ? parseInt(hotel.baiduCommentNum, 10) : null
+    };
 
     res.json({
       success: true,
-      data: hotel
+      data: enriched
     });
   } catch (error) {
     res.status(500).json({
@@ -644,7 +791,7 @@ app.post('/api/hotels', (req, res) => {
     console.log('req.body.rating:', req.body.rating);
     console.log('req.body.phone:', req.body.phone);
     const hotels = readHotels();
-
+    
     // 验证数据
     const validation = validateHotel(req.body);
     if (!validation.valid) {
@@ -653,7 +800,7 @@ app.post('/api/hotels', (req, res) => {
         message: validation.message
       });
     }
-
+    
     const rtResult = parseAndValidateRoomTypes(req.body.roomTypesStr);
     if (!rtResult.valid) {
       return res.status(400).json({
@@ -683,9 +830,9 @@ app.post('/api/hotels', (req, res) => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
-
+    
     console.log('创建的酒店对象:', newHotel);
-
+    
     hotels.push(newHotel);
     writeHotels(hotels);
     createMessage(
@@ -695,7 +842,7 @@ app.post('/api/hotels', (req, res) => {
       null,
       { needProcess: true, actionType: 'hotel_add', linkTo: '/admin/audit', targetHotelId: newHotel.id, targetMerchantId: newHotel.userId }
     );
-
+    
     res.status(201).json({
       success: true,
       data: newHotel,
@@ -718,14 +865,14 @@ app.put('/api/hotels/:id', (req, res) => {
   try {
     const hotels = readHotels();
     const index = hotels.findIndex(h => h.id === req.params.id);
-
+    
     if (index === -1) {
       return res.status(404).json({
         success: false,
         message: '酒店不存在'
       });
     }
-
+    
     // 检查用户权限（商户只能更新自己的酒店）
     const { userId, role } = req.query;
     if (userId && hotels[index].userId !== userId && role !== 'admin') {
@@ -734,10 +881,10 @@ app.put('/api/hotels/:id', (req, res) => {
         message: '无权更新该酒店信息'
       });
     }
-
+    
     // 检查是否只更新状态（上线/下线）
     const isOnlyStatusUpdate = Object.keys(req.body).length === 1 && req.body.status;
-
+    
     if (role === 'admin' && isOnlyStatusUpdate) {
       // 管理员只更新酒店状态，直接生效
       hotels[index] = {
@@ -754,7 +901,7 @@ app.put('/api/hotels/:id', (req, res) => {
           message: validation.message
         });
       }
-
+      
       const rtResult = parseAndValidateRoomTypes(req.body.roomTypesStr);
       if (!rtResult.valid) {
         return res.status(400).json({
@@ -809,9 +956,9 @@ app.put('/api/hotels/:id', (req, res) => {
         }
       }
     }
-
+    
     writeHotels(hotels);
-
+    
     // 生成通知：商户修改酒店信息通知admin（仅告知，无需审核，商户编辑自动通过）
     const users = readUsers();
     const adminUsers = users.filter(u => u.role === 'admin');
@@ -824,12 +971,12 @@ app.put('/api/hotels/:id', (req, res) => {
         { needProcess: false, actionType: 'hotel_edit_inform', targetHotelId: hotels[index].id }
       );
     }
-
+    
     // 生成通知：管理员修改酒店信息通知商户
     if (role === 'admin') {
       console.log(`[通知] 管理员修改了酒店信息：${hotels[index].name}`);
       console.log(`[通知] 已通知商户：${hotels[index].userId}`);
-
+      
       // 创建消息通知
       createMessage(
         '酒店信息已被修改',
@@ -839,7 +986,7 @@ app.put('/api/hotels/:id', (req, res) => {
         { actionType: 'hotel_admin_edit', targetHotelId: hotels[index].id }
       );
     }
-
+    
     res.json({
       success: true,
       data: hotels[index],
@@ -863,24 +1010,24 @@ app.put('/api/hotels/:id/status', (req, res) => {
   try {
     const hotels = readHotels();
     const index = hotels.findIndex(h => h.id === req.params.id);
-
+    
     if (index === -1) {
       return res.status(404).json({
         success: false,
         message: '酒店不存在'
       });
     }
-
+    
     const { status, rejectReason } = req.body;
     const validStatuses = ['pending', 'approved', 'rejected', 'offline'];
-
+    
     if (!validStatuses.includes(status)) {
       return res.status(400).json({
         success: false,
         message: '无效的状态值，必须是 pending、approved、rejected 或 offline'
       });
     }
-
+    
     const prevStatus = hotels[index].status;
     hotels[index].status = status;
     hotels[index].updatedAt = new Date().toISOString();
@@ -890,32 +1037,30 @@ app.put('/api/hotels/:id/status', (req, res) => {
       delete hotels[index].rejectReason;
     }
 
-    writeHotels(hotels);
+    const { adminId, adminUsername } = req.body || {};
 
+    // 记录审核管理员
+    if ((status === 'approved' || status === 'rejected') && (prevStatus === 'pending' || prevStatus === 'rejected' || prevStatus === 'approved')) {
+      hotels[index].auditBy = adminUsername || '系统管理员';
+      hotels[index].auditAt = new Date().toISOString();
+    }
+    
+    writeHotels(hotels);
+    
     const hotel = hotels[index];
     const hotelId = hotel.id;
 
     // 当管理员执行审核操作（通过/拒绝）时，自动标记相关待处理消息为已处理，并记录处理人（仅 hotel_add 需审核）
-    const { adminId, adminUsername } = req.body || {};
     if ((status === 'approved' || status === 'rejected') && adminId && adminUsername) {
       const messages = readMessages();
       let changed = false;
       for (const msg of messages) {
         if (msg.needProcess && !msg.processed && String(msg.targetHotelId) === String(hotelId) &&
-          msg.actionType === 'hotel_add') {
+            msg.actionType === 'hotel_add') {
           msg.processed = true;
           msg.processedBy = adminUsername;
           msg.processedByAdminId = adminId;
           msg.processedAt = new Date().toISOString();
-          if (status === 'approved') {
-            msg.title = '酒店审核通过';
-            msg.content = `商户新增酒店「${hotel.name}」已审核通过`;
-            msg.actionType = 'hotel_approved';
-          } else if (status === 'rejected') {
-            msg.title = '酒店审核拒绝';
-            msg.content = `商户新增酒店「${hotel.name}」未通过审核${rejectReason ? '：' + rejectReason : ''}`;
-            msg.actionType = 'hotel_rejected';
-          }
           changed = true;
         }
       }
@@ -933,13 +1078,13 @@ app.put('/api/hotels/:id/status', (req, res) => {
         createMessage('酒店已上线', `您的酒店「${hotel.name}」已重新上线`, 'merchant', merchantId, { actionType: 'hotel_online', targetHotelId: hotel.id });
       }
     }
-
+    
     const statusMap = {
       'pending': '待审核',
       'approved': '已通过',
       'rejected': '已拒绝'
     };
-
+    
     res.json({
       success: true,
       data: hotels[index],
@@ -962,18 +1107,17 @@ app.delete('/api/hotels/:id', (req, res) => {
   try {
     const hotels = readHotels();
     const index = hotels.findIndex(h => h.id === req.params.id);
-
+    
     if (index === -1) {
       return res.status(404).json({
         success: false,
         message: '酒店不存在'
       });
     }
-
+    
     // 检查用户权限
     const { userId, role } = req.query;
     if (role === 'admin') {
-      // 管理员只能删除已下线的酒店
       if (hotels[index].status !== 'offline') {
         return res.status(400).json({
           success: false,
@@ -994,7 +1138,7 @@ app.delete('/api/hotels/:id', (req, res) => {
         message: '缺少权限参数'
       });
     }
-
+    
     const deletedHotel = hotels[index];
     const merchantId = deletedHotel.userId;
     if (merchantId) {
@@ -1013,7 +1157,7 @@ app.delete('/api/hotels/:id', (req, res) => {
         writeUsers(users);
       }
     }
-
+    
     res.json({
       success: true,
       message: '酒店删除成功',
@@ -1040,7 +1184,7 @@ app.put('/api/hotels/:id/admin', (req, res) => {
     const updateData = req.body;
     const hotels = readHotels();
     const users = readUsers();
-
+    
     // 查找酒店
     const hotelIndex = hotels.findIndex(h => h.id === id);
     if (hotelIndex === -1) {
@@ -1049,16 +1193,16 @@ app.put('/api/hotels/:id/admin', (req, res) => {
         message: '酒店不存在'
       });
     }
-
+    
     const hotel = hotels[hotelIndex];
     const merchantUser = users.find(u => u.id === hotel.userId);
-
+    
     // 生成通知：admin修改酒店信息需要商户确认
     if (merchantUser) {
       console.log(`[通知] 管理员修改了酒店信息，需要商户确认：${hotel.name}`);
       console.log(`[通知] 已通知商户：${merchantUser.name}`);
     }
-
+    
     // 这里可以添加确认请求的存储逻辑
     // 暂时返回需要确认的状态
     res.json({
@@ -1087,18 +1231,30 @@ app.put('/api/hotels/:id/admin', (req, res) => {
 app.get('/api/stats', (req, res) => {
   try {
     const hotels = readHotels();
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    let todayNewHotels = 0;
+    let todayAudits = 0;
+    for (const h of hotels) {
+      if (new Date(h.createdAt) >= today) todayNewHotels++;
+      if (new Date(h.updatedAt) >= today && (h.status === 'approved' || h.status === 'rejected')) todayAudits++;
+    }
+
     const stats = {
       total: hotels.length,
       pending: hotels.filter(h => h.status === 'pending').length,
       approved: hotels.filter(h => h.status === 'approved').length,
       rejected: hotels.filter(h => h.status === 'rejected').length,
-      // 额外统计
-      avgPrice: hotels.length > 0
+      avgPrice: hotels.length > 0 
         ? (hotels.reduce((sum, h) => sum + h.price, 0) / hotels.length).toFixed(2)
         : 0,
-      cities: [...new Set(hotels.map(h => h.city))].length
+      cities: [...new Set(hotels.map(h => h.city))].length,
+      todayNewHotels,
+      todayAudits
     };
-
+    
     res.json({
       success: true,
       data: stats
@@ -1107,6 +1263,62 @@ app.get('/api/stats', (req, res) => {
     res.status(500).json({
       success: false,
       message: '获取统计数据失败',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * 获取分析报表数据（服务端预计算）
+ * GET /api/stats/analytics
+ */
+app.get('/api/stats/analytics', (req, res) => {
+  try {
+    const hotels = readHotels();
+
+    const statusCounts = { pending: 0, approved: 0, rejected: 0, offline: 0 };
+    const priceRanges = [
+      { min: 0, max: 200, name: '¥200以下', count: 0 },
+      { min: 200, max: 500, name: '¥200-500', count: 0 },
+      { min: 500, max: 1000, name: '¥500-1000', count: 0 },
+      { min: 1000, max: Infinity, name: '¥1000+', count: 0 }
+    ];
+    const cityCount = {};
+    let priceSum = 0;
+
+    for (const h of hotels) {
+      const s = h.status || 'pending';
+      if (statusCounts[s] !== undefined) statusCounts[s]++;
+
+      const p = h.price || 0;
+      priceSum += p;
+      const r = priceRanges.find(x => p >= x.min && p < x.max);
+      if (r) r.count++;
+
+      const c = h.city || '未知';
+      cityCount[c] = (cityCount[c] || 0) + 1;
+    }
+
+    const cityTop8 = Object.entries(cityCount)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([city, count]) => ({ city, count }));
+
+    res.json({
+      success: true,
+      data: {
+        total: hotels.length,
+        ...statusCounts,
+        avgPrice: hotels.length > 0 ? (priceSum / hotels.length).toFixed(2) : 0,
+        cities: Object.keys(cityCount).length,
+        priceRanges: priceRanges.map(r => ({ name: r.name, count: r.count })),
+        cityTop8
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: '获取分析数据失败',
       error: error.message
     });
   }
@@ -1177,28 +1389,28 @@ app.post('/api/invite-codes', (req, res) => {
 app.post('/api/auth/login', (req, res) => {
   try {
     const { username, password } = req.body;
-
+    
     if (!username || !password) {
       return res.status(400).json({
         success: false,
         message: '用户名和密码不能为空'
       });
     }
-
+    
     const users = readUsers();
     const user = users.find(u => u.username === username && u.password === password);
-
+    
     if (!user) {
       return res.status(401).json({
         success: false,
         message: '用户名或密码错误'
       });
     }
-
+    
     // 返回用户信息（不包含密码）
     const { password: _, ...userInfo } = user;
     appendLog('LOGIN', `用户 ${username} 登录`, user.id, user.role);
-
+    
     res.json({
       success: true,
       data: userInfo,
@@ -1220,7 +1432,7 @@ app.post('/api/auth/login', (req, res) => {
 app.post('/api/auth/register', (req, res) => {
   try {
     const { username, password, role, name, phone, email } = req.body;
-
+    
     // 验证必填字段
     if (!username || !password || !role || !name || !phone) {
       return res.status(400).json({
@@ -1228,7 +1440,7 @@ app.post('/api/auth/register', (req, res) => {
         message: '请填写所有必填字段'
       });
     }
-
+    
     // 验证手机号格式
     if (!/^1[3-9]\d{9}$/.test(phone)) {
       return res.status(400).json({
@@ -1236,7 +1448,7 @@ app.post('/api/auth/register', (req, res) => {
         message: '请输入正确的手机号'
       });
     }
-
+    
     // 验证邮箱格式（如果提供）
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return res.status(400).json({
@@ -1244,7 +1456,7 @@ app.post('/api/auth/register', (req, res) => {
         message: '请输入正确的邮箱地址'
       });
     }
-
+    
     // 验证角色
     if (!['merchant', 'admin'].includes(role)) {
       return res.status(400).json({
@@ -1252,7 +1464,7 @@ app.post('/api/auth/register', (req, res) => {
         message: '无效的角色类型'
       });
     }
-
+    
     // 管理员注册需要有效邀请码（来自邀请码池，一次性使用）
     if (role === 'admin') {
       const { inviteCode } = req.body;
@@ -1275,9 +1487,9 @@ app.post('/api/auth/register', (req, res) => {
       codes[idx].usedAt = new Date().toISOString();
       writeInviteCodes(codes);
     }
-
+    
     const users = readUsers();
-
+    
     // 检查用户名是否已存在
     if (users.find(u => u.username === username)) {
       return res.status(409).json({
@@ -1285,7 +1497,7 @@ app.post('/api/auth/register', (req, res) => {
         message: '用户名已存在'
       });
     }
-
+    
     // 创建新用户
     const newUser = {
       id: generateUserId(),
@@ -1297,14 +1509,14 @@ app.post('/api/auth/register', (req, res) => {
       email: email ? email.trim() : '',
       createdAt: new Date().toISOString()
     };
-
+    
     users.push(newUser);
     writeUsers(users);
     appendLog('REGISTER', `新用户注册: ${username} (${role})`, newUser.id, role);
-
+    
     // 返回用户信息（不包含密码）
     const { password: _, ...userInfo } = newUser;
-
+    
     res.status(201).json({
       success: true,
       data: userInfo,
@@ -1320,6 +1532,64 @@ app.post('/api/auth/register', (req, res) => {
 });
 
 /**
+ * 归档单条审核条目（从审核列表中移除，不删除酒店）
+ * PUT /api/hotels/:id/audit-dismiss
+ */
+app.put('/api/hotels/:id/audit-dismiss', (req, res) => {
+  try {
+    const hotels = readHotels();
+    const index = hotels.findIndex(h => h.id === req.params.id);
+    if (index === -1) {
+      return res.status(404).json({ success: false, message: '酒店不存在' });
+    }
+    if (hotels[index].status === 'pending') {
+      return res.status(400).json({ success: false, message: '待审核酒店不能从审核列表中移除' });
+    }
+    hotels[index].auditArchived = true;
+    writeHotels(hotels);
+    res.json({ success: true, message: '已从审核列表移除' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: '操作失败', error: error.message });
+  }
+});
+
+/**
+ * 批量归档审核条目
+ * POST /api/hotels/batch-audit-dismiss
+ * body: { ids: [...] }
+ */
+app.post('/api/hotels/batch-audit-dismiss', (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, message: '请提供要移除的酒店ID列表' });
+    }
+    const hotels = readHotels();
+    let dismissed = 0;
+    let skippedPending = 0;
+    const idSet = new Set(ids.map(String));
+    for (const h of hotels) {
+      if (idSet.has(String(h.id))) {
+        if (h.status === 'pending') {
+          skippedPending++;
+        } else {
+          h.auditArchived = true;
+          dismissed++;
+        }
+      }
+    }
+    writeHotels(hotels);
+    res.json({
+      success: true,
+      data: { dismissed, skippedPending },
+      message: `已移除 ${dismissed} 条${skippedPending > 0 ? `，${skippedPending} 条待审核已跳过` : ''}`
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: '操作失败', error: error.message });
+  }
+});
+
+/**
  * 获取最近活动
  * GET /api/activities
  * 返回最近的酒店相关活动
@@ -1328,43 +1598,45 @@ app.get('/api/activities', (req, res) => {
   try {
     const hotels = readHotels();
     const users = readUsers();
-
+    
     // 生成活动数据
     const activities = [];
-
+    
     // 按更新时间排序酒店
-    const sortedHotels = [...hotels].sort((a, b) =>
+    const sortedHotels = [...hotels].sort((a, b) => 
       new Date(b.updatedAt) - new Date(a.updatedAt)
     ).slice(0, 10); // 只取最近10条
-
+    
     sortedHotels.forEach(hotel => {
-      const user = users.find(u => u.id === hotel.userId);
-      const username = user ? user.name : '未知用户';
-
-      // 根据酒店状态生成活动
+      const merchant = users.find(u => u.id === hotel.userId);
+      const merchantName = merchant ? merchant.name : '未知用户';
+      
       let action = '';
       let type = '';
-
+      let displayUser = merchantName;
+      
       if (hotel.status === 'pending') {
         action = `提交了新酒店「${hotel.name}」`;
         type = 'entry';
       } else if (hotel.status === 'approved') {
         action = `审核通过了酒店「${hotel.name}」`;
         type = 'audit';
+        displayUser = hotel.auditBy || '系统管理员';
       } else if (hotel.status === 'rejected') {
         action = `审核拒绝了酒店「${hotel.name}」`;
         type = 'audit';
+        displayUser = hotel.auditBy || '系统管理员';
       }
-
+      
       activities.push({
         id: hotel.id,
         type: type,
         action: action,
         time: hotel.updatedAt,
-        user: username
+        user: displayUser
       });
     });
-
+    
     res.json({
       success: true,
       data: activities
@@ -1385,21 +1657,21 @@ app.get('/api/activities', (req, res) => {
 app.get('/api/messages', (req, res) => {
   try {
     const { role, userId, adminId } = req.query;
-
+    
     if (!role) {
       return res.status(400).json({
         success: false,
         message: '角色参数不能为空'
       });
     }
-
+    
     const messages = readMessages();
     let userMessages = messages.filter(msg => msg.recipientRole === role);
-
+    
     if (role === 'merchant' && userId) {
       userMessages = userMessages.filter(msg => !msg.recipientId || msg.recipientId === userId);
     }
-
+    
     if (role === 'admin') {
       userMessages = userMessages.map(msg => {
         const m = { ...msg };
@@ -1407,9 +1679,9 @@ app.get('/api/messages', (req, res) => {
         return m;
       });
     }
-
+    
     userMessages.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
+    
     res.json({
       success: true,
       data: userMessages
@@ -1433,14 +1705,14 @@ app.put('/api/messages/:id/read', (req, res) => {
     const { adminId } = req.body || {};
     const messages = readMessages();
     const messageIndex = messages.findIndex(msg => msg.id === req.params.id);
-
+    
     if (messageIndex === -1) {
       return res.status(404).json({
         success: false,
         message: '消息不存在'
       });
     }
-
+    
     const msg = messages[messageIndex];
     if (msg.recipientRole === 'admin' && adminId) {
       if (!msg.readBy) msg.readBy = {};
@@ -1449,7 +1721,7 @@ app.put('/api/messages/:id/read', (req, res) => {
       msg.read = true;
     }
     writeMessages(messages);
-
+    
     res.json({
       success: true,
       data: messages[messageIndex],
@@ -1480,20 +1752,20 @@ app.put('/api/messages/:id/process', (req, res) => {
     }
     const messages = readMessages();
     const messageIndex = messages.findIndex(msg => msg.id === req.params.id);
-
+    
     if (messageIndex === -1) {
       return res.status(404).json({
         success: false,
         message: '消息不存在'
       });
     }
-
+    
     const msg = messages[messageIndex];
     msg.processed = true;
     msg.processedBy = adminUsername;
     msg.processedAt = new Date().toISOString();
     writeMessages(messages);
-
+    
     res.json({
       success: true,
       data: messages[messageIndex],
@@ -1516,16 +1788,16 @@ app.delete('/api/messages/:id', (req, res) => {
   try {
     const messages = readMessages();
     const filteredMessages = messages.filter(msg => msg.id !== req.params.id);
-
+    
     if (filteredMessages.length === messages.length) {
       return res.status(404).json({
         success: false,
         message: '消息不存在'
       });
     }
-
+    
     writeMessages(filteredMessages);
-
+    
     res.json({
       success: true,
       message: '消息已删除'
@@ -1576,12 +1848,6 @@ app.get('/api/users', (req, res) => {
       list = list.filter(u => u.role === 'merchant' && u.hotelCount === 0);
     }
 
-    list.sort((a, b) => {
-      if (a.role === 'admin' && b.role !== 'admin') return -1;
-      if (a.role !== 'admin' && b.role === 'admin') return 1;
-      return 0;
-    });
-
     res.json({
       success: true,
       data: list
@@ -1603,16 +1869,16 @@ app.delete('/api/users/:id', (req, res) => {
   try {
     const users = readUsers();
     const userIndex = users.findIndex(u => u.id === req.params.id);
-
+    
     if (userIndex === -1) {
       return res.status(404).json({
         success: false,
         message: '用户不存在'
       });
     }
-
+    
     const user = users[userIndex];
-
+    
     // 管理员之间不能互相删除
     if (user.role === 'admin') {
       return res.status(403).json({
@@ -1620,14 +1886,14 @@ app.delete('/api/users/:id', (req, res) => {
         message: '管理员之间不能互相删除'
       });
     }
-
+    
     // 检查用户是否有酒店
     const hotels = readHotels();
     // 检查有userId字段且匹配的酒店
     const userHotelsWithId = hotels.filter(h => h.userId === user.id && (h.status === 'approved' || h.status === 'pending' || h.status === 'pending_merchant_confirm'));
     // 检查没有userId字段的酒店（可能是默认用户创建的）
     const userHotelsWithoutId = hotels.filter(h => !h.userId && (h.status === 'approved' || h.status === 'pending' || h.status === 'pending_merchant_confirm'));
-
+    
     // 如果是默认用户（如merchant1），且有未关联的酒店，则阻止删除
     if (user.username === 'merchant1' && userHotelsWithoutId.length > 0) {
       return res.status(400).json({
@@ -1635,7 +1901,7 @@ app.delete('/api/users/:id', (req, res) => {
         message: '该商户名下还有酒店，无法删除'
       });
     }
-
+    
     // 如果用户名下有已关联的酒店，则阻止删除
     if (userHotelsWithId.length > 0) {
       return res.status(400).json({
@@ -1643,12 +1909,12 @@ app.delete('/api/users/:id', (req, res) => {
         message: '该商户名下还有酒店，无法删除'
       });
     }
-
+    
     // 删除用户
     users.splice(userIndex, 1);
     writeUsers(users);
     appendLog('DELETE_USER', `删除用户 ${user.username}(${user.id})`, req.headers['x-admin-id'] || 'system', 'admin');
-
+    
     res.json({
       success: true,
       message: '用户已删除'
@@ -2048,6 +2314,400 @@ app.get('/api/geo/reverse', (req, res) => {
   }).on('error', (e) => {
     res.status(502).json({ success: false, message: '请求百度API失败' });
   });
+});
+
+// =============================================
+// AI Agent 专用接口
+// =============================================
+
+/**
+ * AI 搜索端点 — 为 Coze Plugin 优化
+ * GET /api/ai/search
+ * 
+ * 参数: city, keyword, price_min, price_max, star, tags, sort, limit
+ * 返回精简结构，便于 LLM 直接引用
+ */
+app.get('/api/ai/search', (req, res) => {
+  try {
+    const hotels = readHotels();
+    const { city, keyword, price_min, price_max, star, tags, sort = 'rating', limit = 5 } = req.query;
+
+    let result = hotels.filter(h => h.status === 'approved');
+
+    if (city && city.trim()) {
+      const c = city.trim();
+      result = result.filter(h => (h.city && h.city.includes(c)) || (h.address && h.address.includes(c)));
+    }
+
+    if (keyword && keyword.trim()) {
+      const kw = keyword.trim().toLowerCase();
+      result = result.filter(h => {
+        const searchable = [h.name, h.description, h.address, h.brand, ...(h.tags || []), ...(h.amenities || [])].join(' ').toLowerCase();
+        return searchable.includes(kw);
+      });
+    }
+
+    if (star) {
+      const starNum = parseInt(star);
+      if (!isNaN(starNum) && starNum > 0) result = result.filter(h => (h.rating || 0) >= starNum);
+    }
+
+    if (price_min) {
+      const min = parseFloat(price_min);
+      if (!isNaN(min) && min > 0) result = result.filter(h => (h.price || 0) >= min);
+    }
+    if (price_max) {
+      const max = parseFloat(price_max);
+      if (!isNaN(max) && max > 0) result = result.filter(h => (h.price || 0) <= max);
+    }
+
+    if (tags && tags.trim()) {
+      const tagList = tags.split(',').map(t => t.trim()).filter(Boolean);
+      result = result.filter(h => {
+        const hAll = [...(h.tags || []), ...(h.amenities || [])].map(String).join(' ');
+        return tagList.every(t => hAll.includes(t));
+      });
+    }
+
+    if (sort === 'price_asc') result.sort((a, b) => (a.price || 0) - (b.price || 0));
+    else if (sort === 'price_desc') result.sort((a, b) => (b.price || 0) - (a.price || 0));
+    else result.sort((a, b) => parseFloat(b.baiduOverallRating || 0) - parseFloat(a.baiduOverallRating || 0));
+
+    const total = result.length;
+    const items = result.slice(0, Math.min(parseInt(limit) || 5, 10)).map(h => ({
+      id: h.id,
+      name: h.name,
+      city: h.city,
+      district: h.district || '',
+      price: h.price,
+      rating: h.rating,
+      overallRating: h.baiduOverallRating || '',
+      commentCount: h.baiduCommentNum || '',
+      brand: h.brand || '',
+      category: h.category || '',
+      amenities: (h.amenities || []).slice(0, 6),
+      tags: (h.tags || []).slice(0, 4),
+      summary: `${h.name}，位于${h.city}${h.district || ''}，${h.category || starText(h.rating)}，¥${h.price}/晚${h.baiduOverallRating ? '，评分' + h.baiduOverallRating : ''}${h.brand ? '，' + h.brand + '品牌' : ''}`
+    }));
+
+    function starText(r) {
+      return r >= 5 ? '五星豪华' : r >= 4 ? '四星高档' : r >= 3 ? '三星舒适' : '经济型';
+    }
+
+    res.json({ success: true, total, count: items.length, hotels: items });
+  } catch (err) {
+    console.error('AI search error:', err);
+    res.status(500).json({ success: false, message: 'AI搜索服务暂不可用' });
+  }
+});
+
+// ==================== 客户端用户认证 API ====================
+
+app.post('/api/client/auth/login', (req, res) => {
+  try {
+    const { phone, code } = req.body;
+    if (!phone || !code) {
+      return res.status(400).json({ success: false, message: '手机号和验证码不能为空' });
+    }
+    if (!/^1[3-9]\d{9}$/.test(phone)) {
+      return res.status(400).json({ success: false, message: '请输入正确的手机号' });
+    }
+    if (code !== '8888') {
+      return res.status(400).json({ success: false, message: '验证码错误' });
+    }
+
+    const users = readClientUsers();
+    let user = users.find(u => u.phone === phone);
+
+    if (!user) {
+      const last4 = phone.slice(-4);
+      user = {
+        id: 'cu_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+        phone,
+        nickname: '旅行者' + last4,
+        avatar: null,
+        created_at: new Date().toISOString()
+      };
+      users.push(user);
+      writeClientUsers(users);
+    }
+
+    res.json({ success: true, data: user, message: '登录成功' });
+  } catch (error) {
+    console.error('客户端登录失败:', error);
+    res.status(500).json({ success: false, message: '登录失败' });
+  }
+});
+
+app.get('/api/client/auth/profile', (req, res) => {
+  try {
+    const uid = req.headers['x-client-uid'];
+    if (!uid) return res.status(401).json({ success: false, message: '未登录' });
+
+    const users = readClientUsers();
+    const user = users.find(u => u.id === uid);
+    if (!user) return res.status(404).json({ success: false, message: '用户不存在' });
+
+    res.json({ success: true, data: user });
+  } catch (error) {
+    res.status(500).json({ success: false, message: '获取信息失败' });
+  }
+});
+
+app.put('/api/client/auth/profile', (req, res) => {
+  try {
+    const uid = req.headers['x-client-uid'];
+    if (!uid) return res.status(401).json({ success: false, message: '未登录' });
+
+    const users = readClientUsers();
+    const idx = users.findIndex(u => u.id === uid);
+    if (idx === -1) return res.status(404).json({ success: false, message: '用户不存在' });
+
+    const { nickname } = req.body;
+    if (nickname) users[idx].nickname = nickname.slice(0, 20);
+    writeClientUsers(users);
+
+    res.json({ success: true, data: users[idx] });
+  } catch (error) {
+    res.status(500).json({ success: false, message: '更新失败' });
+  }
+});
+
+// ==================== 对话会话管理 API ====================
+
+app.get('/api/client/chat/sessions', (req, res) => {
+  try {
+    const uid = req.query.user_id || req.headers['x-client-uid'];
+    if (!uid) return res.status(401).json({ success: false, message: '未登录' });
+
+    const sessions = readChatSessions()
+      .filter(s => s.user_id === uid)
+      .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
+      .map(({ id, title, mode, updated_at, created_at }) => ({ id, title, mode, updated_at, created_at }));
+
+    res.json({ success: true, data: sessions });
+  } catch (error) {
+    res.status(500).json({ success: false, message: '获取会话列表失败' });
+  }
+});
+
+app.post('/api/client/chat/sessions', (req, res) => {
+  try {
+    const uid = req.body.user_id || req.headers['x-client-uid'];
+    if (!uid) return res.status(401).json({ success: false, message: '未登录' });
+
+    const session = {
+      id: 'sess_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+      user_id: uid,
+      title: '新对话',
+      coze_conversation_id: null,
+      mode: req.body.mode || 'fast',
+      messages: [],
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    const sessions = readChatSessions();
+    sessions.push(session);
+    writeChatSessions(sessions);
+
+    res.json({ success: true, data: session });
+  } catch (error) {
+    res.status(500).json({ success: false, message: '创建会话失败' });
+  }
+});
+
+app.get('/api/client/chat/sessions/:id', (req, res) => {
+  try {
+    const sessions = readChatSessions();
+    const session = sessions.find(s => s.id === req.params.id);
+    if (!session) return res.status(404).json({ success: false, message: '会话不存在' });
+
+    res.json({ success: true, data: session });
+  } catch (error) {
+    res.status(500).json({ success: false, message: '获取会话失败' });
+  }
+});
+
+app.delete('/api/client/chat/sessions/:id', (req, res) => {
+  try {
+    const sessions = readChatSessions();
+    const idx = sessions.findIndex(s => s.id === req.params.id);
+    if (idx === -1) return res.status(404).json({ success: false, message: '会话不存在' });
+
+    sessions.splice(idx, 1);
+    writeChatSessions(sessions);
+
+    res.json({ success: true, message: '删除成功' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: '删除失败' });
+  }
+});
+
+// ==================== Coze Chat 代理端点 ====================
+
+/**
+ * POST /api/chat
+ * Body: { message, conversation_id?, mode?, session_id?, user_id? }
+ * 转发到 Coze Chat API，流式返回
+ * mode: 'fast'(默认) 或 'deep'
+ */
+app.post('/api/chat', async (req, res) => {
+  const { message, conversation_id, mode = 'fast', session_id, user_id } = req.body;
+  if (!message || !message.trim()) {
+    return res.status(400).json({ success: false, message: '消息不能为空' });
+  }
+
+  const COZE_API_TOKEN = process.env.COZE_API_TOKEN;
+  const COZE_BOT_ID_DEEP = process.env.COZE_BOT_ID;
+  const COZE_BOT_ID_FAST = process.env.COZE_BOT_ID_FAST || COZE_BOT_ID_DEEP;
+  const botId = mode === 'deep' ? COZE_BOT_ID_DEEP : COZE_BOT_ID_FAST;
+
+  if (!COZE_API_TOKEN || !botId) {
+    return res.status(503).json({
+      success: false,
+      message: 'AI 助手尚未配置，请联系管理员设置 COZE_API_TOKEN 和 COZE_BOT_ID'
+    });
+  }
+
+  // 保存用户消息到会话
+  if (session_id && user_id) {
+    try {
+      const sessions = readChatSessions();
+      const sess = sessions.find(s => s.id === session_id && s.user_id === user_id);
+      if (sess) {
+        sess.messages.push({ role: 'user', content: message.trim(), time: new Date().toISOString() });
+        if (sess.messages.filter(m => m.role === 'user').length === 1) {
+          sess.title = message.trim().slice(0, 15) + (message.trim().length > 15 ? '...' : '');
+        }
+        sess.mode = mode;
+        sess.updated_at = new Date().toISOString();
+        writeChatSessions(sessions);
+      }
+    } catch (e) {
+      console.error('保存用户消息失败:', e);
+    }
+  }
+
+  const cozeUserId = user_id || `user_${req.ip || 'anonymous'}`;
+
+  // 获取 coze_conversation_id 用于多轮对话
+  let cozeConvId = conversation_id;
+  if (!cozeConvId && session_id) {
+    try {
+      const sessions = readChatSessions();
+      const sess = sessions.find(s => s.id === session_id);
+      if (sess && sess.coze_conversation_id) cozeConvId = sess.coze_conversation_id;
+    } catch (e) {}
+  }
+
+  const body = JSON.stringify({
+    bot_id: botId,
+    user_id: cozeUserId,
+    stream: true,
+    auto_save_history: true,
+    additional_messages: [{
+      role: 'user',
+      content: message.trim(),
+      content_type: 'text'
+    }],
+    ...(cozeConvId ? { conversation_id: cozeConvId } : {})
+  });
+
+  const options = {
+    hostname: 'api.coze.cn',
+    port: 443,
+    path: '/v3/chat',
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${COZE_API_TOKEN}`,
+      'Content-Type': 'application/json',
+      'Accept': 'text/event-stream',
+      'Content-Length': Buffer.byteLength(body)
+    }
+  };
+
+  res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+
+  let fullAssistantContent = '';
+  let savedConvId = cozeConvId;
+
+  const cozeReq = https.request(options, (cozeRes) => {
+    cozeRes.setEncoding('utf8');
+
+    if (cozeRes.statusCode !== 200) {
+      let errBody = '';
+      cozeRes.on('data', chunk => errBody += chunk);
+      cozeRes.on('end', () => {
+        console.error(`Coze API 错误 [${cozeRes.statusCode}]:`, errBody);
+        const safeMsg = JSON.stringify(`AI 服务暂时不可用 (HTTP ${cozeRes.statusCode})`);
+        res.write(`data: {"event":"conversation.message.completed","data":{"type":"answer","content":${safeMsg}}}\n\n`);
+        res.end();
+      });
+      return;
+    }
+
+    let sseBuffer = '';
+    cozeRes.on('data', (chunk) => {
+      res.write(chunk);
+
+      // 解析 SSE 数据以收集完整回复和 conversation_id
+      sseBuffer += chunk;
+      const lines = sseBuffer.split('\n');
+      sseBuffer = lines.pop() || '';
+      let currentEvent = '';
+      for (const line of lines) {
+        if (line.startsWith('event:')) { currentEvent = line.slice(6).trim(); continue; }
+        if (!line.startsWith('data:')) continue;
+        const dataStr = line.slice(5).trim();
+        if (!dataStr || dataStr === '[DONE]') { currentEvent = ''; continue; }
+        try {
+          const data = JSON.parse(dataStr);
+          if (data.conversation_id && !savedConvId) savedConvId = data.conversation_id;
+          if (currentEvent === 'conversation.message.delta' && data.type === 'answer' && data.content) {
+            fullAssistantContent += data.content;
+          }
+          if (currentEvent === 'conversation.message.completed' && data.type === 'answer' && data.content) {
+            fullAssistantContent = data.content;
+          }
+        } catch (e) {}
+        currentEvent = '';
+      }
+    });
+
+    cozeRes.on('end', () => {
+      res.end();
+
+      // 流结束后保存助手回复到会话
+      if (session_id && user_id && fullAssistantContent) {
+        try {
+          const sessions = readChatSessions();
+          const sess = sessions.find(s => s.id === session_id && s.user_id === user_id);
+          if (sess) {
+            sess.messages.push({ role: 'assistant', content: fullAssistantContent, time: new Date().toISOString() });
+            if (savedConvId) sess.coze_conversation_id = savedConvId;
+            sess.updated_at = new Date().toISOString();
+            writeChatSessions(sessions);
+          }
+        } catch (e) {
+          console.error('保存助手回复失败:', e);
+        }
+      }
+    });
+  });
+
+  cozeReq.on('error', (err) => {
+    console.error('Coze API network error:', err.message);
+    const safeMsg = JSON.stringify('AI 服务连接失败，请稍后再试');
+    res.write(`data: {"event":"conversation.message.completed","data":{"type":"answer","content":${safeMsg}}}\n\n`);
+    res.end();
+  });
+
+  cozeReq.write(body);
+  cozeReq.end();
 });
 
 /**

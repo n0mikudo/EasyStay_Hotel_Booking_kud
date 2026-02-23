@@ -1,0 +1,161 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "易宿酒店搜索 API",
+    "description": "搜索易宿平台的酒店数据，支持按城市、价格、星级、关键词、标签等多维度筛选",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://easystay4u.duckdns.org"
+    }
+  ],
+  "paths": {
+    "/api/ai/search": {
+      "get": {
+        "operationId": "searchHotels",
+        "summary": "搜索酒店",
+        "description": "根据用户需求搜索酒店，返回精简的酒店列表。支持城市、价格区间、星级、关键词、标签等多种筛选条件。",
+        "parameters": [
+          {
+            "name": "city",
+            "in": "query",
+            "description": "城市名称，如：北京市、上海市、三亚市",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "keyword",
+            "in": "query",
+            "description": "搜索关键词，可以是酒店名、品牌名、设施名等",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "price_min",
+            "in": "query",
+            "description": "最低价格（元/晚）",
+            "schema": { "type": "number" }
+          },
+          {
+            "name": "price_max",
+            "in": "query",
+            "description": "最高价格（元/晚）",
+            "schema": { "type": "number" }
+          },
+          {
+            "name": "star",
+            "in": "query",
+            "description": "最低星级筛选（返回>=该值的酒店）：2=经济型, 3=舒适型/三星, 4=高档型/四星, 5=豪华型/五星",
+            "schema": { "type": "integer", "enum": [2, 3, 4, 5] }
+          },
+          {
+            "name": "tags",
+            "in": "query",
+            "description": "标签筛选，逗号分隔。可用标签包括：含早餐、性价比高、商务出行、海景、江景、湖景、山景、近地铁、市中心、亲子游、近景区、火车站周边、机场附近、网红打卡、高端奢华、休闲度假、情侣蜜月、温馨民宿、安静舒适、购物便利",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "description": "排序方式：rating=星级从高到低（默认），price_asc=价格从低到高，price_desc=价格从高到低",
+            "schema": { "type": "string", "enum": ["rating", "price_asc", "price_desc"], "default": "rating" }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "返回数量，默认5，最多10",
+            "schema": { "type": "integer", "default": 5, "maximum": 10 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "搜索结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "total": { "type": "integer", "description": "符合条件的总数" },
+                    "count": { "type": "integer", "description": "本次返回数量" },
+                    "hotels": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": { "type": "string", "description": "酒店唯一ID，用于生成详情链接" },
+                          "name": { "type": "string" },
+                          "city": { "type": "string" },
+                          "district": { "type": "string" },
+                          "price": { "type": "number", "description": "每晚价格（元）" },
+                          "rating": { "type": "integer", "description": "星级 2-5" },
+                          "overallRating": { "type": "string", "description": "百度评分（1-5分）" },
+                          "commentCount": { "type": "string", "description": "评价数量" },
+                          "brand": { "type": "string" },
+                          "category": { "type": "string" },
+                          "amenities": { "type": "array", "items": { "type": "string" } },
+                          "tags": { "type": "array", "items": { "type": "string" } },
+                          "summary": { "type": "string", "description": "一句话简介" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/hotels/{id}": {
+      "get": {
+        "operationId": "getHotelDetail",
+        "summary": "获取酒店详情",
+        "description": "根据酒店ID获取完整详情信息",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "酒店ID",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "酒店详情",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": { "type": "string" },
+                        "name": { "type": "string" },
+                        "city": { "type": "string" },
+                        "district": { "type": "string" },
+                        "address": { "type": "string" },
+                        "price": { "type": "number" },
+                        "rating": { "type": "integer" },
+                        "overallRating": { "type": "string", "nullable": true },
+                        "commentCount": { "type": "integer" },
+                        "brand": { "type": "string" },
+                        "category": { "type": "string" },
+                        "amenities": { "type": "array", "items": { "type": "string" } },
+                        "tags": { "type": "array", "items": { "type": "string" } },
+                        "description": { "type": "string" },
+                        "rooms": { "type": "array", "items": { "type": "object" } }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

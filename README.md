@@ -2,13 +2,26 @@
 
 一个完整的酒店预订系统，包含移动端用户界面和PC端管理界面。
 
+## 项目信息
+
+- **服务器 IP**: 81.71.15.150
+- **域名**: easystay4u.duckdns.org（已配置 HTTPS + Let's Encrypt 证书）
+- **项目目录**: /root/hotel/EasyStay_Hotel_Booking_kud
+- **访问地址**:
+  - 管理端: https://easystay4u.duckdns.org
+  - 移动端: https://easystay4u.duckdns.org/mobile/
+  - 后端 API: https://easystay4u.duckdns.org/api
+  - IP 直连（备用）: http://81.71.15.150
+
 ## 项目结构
 
 ```
-EasyStay_Project/
+EasyStay_Hotel_Booking_kud/
 ├── server/              # 后端服务（Node.js + Express）
 ├── client-mobile/       # 移动端（React + Ant Design Mobile）
-└── admin-pc/           # PC管理端（React + Ant Design）
+├── admin-pc/           # PC管理端（React + Ant Design）
+├── pm2.config.js       # PM2 统一配置文件
+└── logs/               # 服务日志目录
 ```
 
 ## 技术栈
@@ -32,48 +45,71 @@ EasyStay_Project/
 
 ## 快速开始
 
-### 1. 安装依赖
+### 方式一：使用 PM2 统一启动（推荐，云服务器）
 
 ```bash
-# 安装后端依赖
+# 进入项目目录
+cd /root/hotel/EasyStay_Hotel_Booking_kud
+
+# 使用 PM2 统一配置启动所有服务
+pm2 start pm2.config.js
+
+# 保存 PM2 配置（开机自启）
+pm2 save
+pm2 startup
+
+# 查看服务状态
+pm2 status
+```
+
+### 方式二：分别启动（本地开发）
+
+```bash
+# 1. 安装依赖
 cd server
 npm install
 
-# 安装移动端依赖
 cd ../client-mobile
 npm install
 
-# 安装PC管理端依赖
 cd ../admin-pc
 npm install
-```
 
-### 2. 启动后端服务
-
-```bash
+# 2. 启动后端服务（终端1）
 cd server
 npm start
-```
 
-后端服务将在 http://localhost:3000 运行
-
-### 3. 启动移动端
-
-```bash
+# 3. 启动移动端（终端2）
 cd client-mobile
 npm start
-```
 
-移动端将在 http://localhost:3001 运行
-
-### 4. 启动PC管理端
-
-```bash
+# 4. 启动PC管理端（终端3）
 cd admin-pc
 npm start
 ```
 
-PC管理端将在 http://localhost:3011 运行
+## PM2 常用命令
+
+```bash
+# 查看所有服务状态
+pm2 status
+
+# 查看服务日志
+pm2 logs easystay-server
+pm2 logs easystay-admin
+pm2 logs easystay-mobile
+
+# 重启服务
+pm2 restart all
+pm2 restart easystay-server
+
+# 停止服务
+pm2 stop all
+pm2 stop easystay-server
+
+# 删除服务
+pm2 delete all
+```
 
 ## 测试账号
 
@@ -148,7 +184,33 @@ PC管理端将在 http://localhost:3011 运行
 - 房型与开业时间：商户录入表单扩展
 - 预订API：用户端预订对接后端，订单持久化到 bookings.json
 
+## 酒店数据更新
+
+本项目已更新酒店数据，包含：
+- **真实数据**：北京、天津、上海三个城市的真实酒店信息（通过百度地图 API 爬取）
+- **模拟数据**：全国 100+ 城市的酒店数据（基于真实行政区划统计模型生成）
+- **数据总量**：5469 条酒店数据
+
+相关脚本位于 `server/scripts/`：
+- `fetch-real-hotels.js` - 爬取真实酒店数据
+- `generate-from-real.js` - 生成模拟酒店数据
+- `clean-and-import.js` - 数据清洗和导入
+- `geo_data.js` - 全国行政区划数据
+
+## HTTPS 与域名
+
+本项目已完成 HTTPS 升级：
+- **域名**：`easystay4u.duckdns.org`（DuckDNS 免费动态 DNS）
+- **SSL 证书**：Let's Encrypt（自动续期，有效期 90 天）
+- **协议**：TLS 1.2/1.3 + HTTP/2 + HSTS
+- **HTTP 自动跳转**：域名访问 HTTP 自动 301 重定向到 HTTPS
+- **IP 直连兼容**：`http://81.71.15.150` 仍可正常访问
+
 ## 文档
 
 - **项目手册**（部署、自检、答辩、常见问题）：[项目手册.md](./项目手册.md)
-- **Coze AI 扩展**（可选）：[Coze_Agent_设计方案与部署步骤.md](./Coze_Agent_设计方案与部署步骤.md)
+- **部署指南**：[部署指南.md](./部署指南.md)
+- **验证测试指导手册**：[验证测试指导手册.md](./验证测试指导手册.md)
+- **GIT 提交指南**：[GIT_提交指南.md](./GIT_提交指南.md)
+- **Coze AI 智能体搭建指南**：[Coze_Agent_搭建指南.md](./Coze_Agent_搭建指南.md)
+- **Coze AI 设计方案**：[Coze_Agent_设计方案与部署步骤.md](./Coze_Agent_设计方案与部署步骤.md)

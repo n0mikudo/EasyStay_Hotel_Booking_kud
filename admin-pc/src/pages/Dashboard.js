@@ -233,7 +233,7 @@ function Dashboard() {
         </ul>
         <Divider />
         <p className="info-footer">
-          前端训练营第五期大作业 | © 2024 易宿平台
+          前端训练营第五期大作业 | © 2026 易宿平台
         </p>
       </Card>
     </div>

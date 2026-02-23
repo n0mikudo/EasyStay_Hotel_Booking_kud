@@ -37,6 +37,7 @@ function AdminSettings() {
     loadSettings();
     loadPermissions();
     loadLogs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadSettings = async () => {
@@ -138,7 +139,7 @@ function AdminSettings() {
     }
   };
 
-  const getRoleTag = (role) => {
+  const getRoleTag = (role) => { // eslint-disable-line no-unused-vars
     const roleMap = {
       'admin': { color: 'blue', text: '管理员' },
       'merchant': { color: 'green', text: '商户' }

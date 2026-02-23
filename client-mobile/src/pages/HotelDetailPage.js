@@ -12,7 +12,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   NavBar,
   Image,
@@ -45,6 +45,9 @@ import './HotelDetailPage.css';
 function HotelDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const routeLocation = useLocation();
+  const passedCheckIn = routeLocation.state?.checkIn;
+  const passedCheckOut = routeLocation.state?.checkOut;
 
   // 酒店数据状态
   const [hotel, setHotel] = useState(null);
@@ -54,35 +57,20 @@ function HotelDetailPage() {
   // 预订相关状态
   const [bookingVisible, setBookingVisible] = useState(false);
   const [selectedRoomType, setSelectedRoomType] = useState(null);
-  const [checkInDate, setCheckInDate] = useState(new Date());
-  const [checkOutDate, setCheckOutDate] = useState(new Date(Date.now() + 86400000));
+  const [checkInDate, setCheckInDate] = useState(
+    passedCheckIn ? new Date(passedCheckIn) : new Date()
+  );
+  const [checkOutDate, setCheckOutDate] = useState(
+    passedCheckOut ? new Date(passedCheckOut) : new Date(Date.now() + 86400000)
+  );
   const [guestCount, setGuestCount] = useState(2);
   const [roomCount, setRoomCount] = useState(1);
   const [datePickerVisible, setDatePickerVisible] = useState(false);
   const [dateType, setDateType] = useState('checkIn');
 
-  // 设施图标映射
-  const amenityIcons = {
-    'wifi': '📶',
-    'parking': '🅿️',
-    'breakfast': '🍳',
-    'gym': '💪',
-    'pool': '🏊',
-    'spa': '💆',
-    'restaurant': '🍽️',
-    'bar': '🍸',
-    'laundry': '👕',
-    'business': '💼',
-    'meeting': '📊',
-    'elevator': '🛗',
-    'aircon': '❄️',
-    'tv': '📺',
-    'minibar': '🥤',
-    'safe': '🔒',
-    'hairdryer': '💨',
-    'toiletries': '🧴',
-    'slippers': '🩴',
-    'robe': '🥼',
+  const getAmenityChar = (name) => {
+    if (!name) return '✓';
+    return name.charAt(0);
   };
 
   const FAVORITES_KEY = 'easystay_favorites';
@@ -386,7 +374,7 @@ function HotelDetailPage() {
         <div className="hotel-tags">
           {hotel.rating && (
             <Tag color="warning" fill="outline">
-              {hotel.rating}星级
+              {hotel.rating >= 5 ? '豪华型' : hotel.rating >= 4 ? '高档型' : hotel.rating >= 3 ? '舒适型' : '经济型'}
             </Tag>
           )}
           {hotel.isRecommended && (
@@ -421,49 +409,60 @@ function HotelDetailPage() {
 
         {/* 评分分布可视化 */}
         <div className="score-distribution">
-          <div className="score-bar-item">
-            <span className="score-label">环境</span>
-            <div className="score-bar-track">
-              <div className="score-bar-fill" style={{ width: `${(hotel.rating || 4.5) / 5 * 100}%` }} />
-            </div>
-            <span className="score-num">{hotel.rating || 4.5}</span>
-          </div>
-          <div className="score-bar-item">
-            <span className="score-label">服务</span>
-            <div className="score-bar-track">
-              <div className="score-bar-fill" style={{ width: `${Math.min(100, ((hotel.rating || 4.5) + 0.2) / 5 * 100)}%` }} />
-            </div>
-            <span className="score-num">{(parseFloat(hotel.rating) || 4.5) + 0.2}</span>
-          </div>
-          <div className="score-bar-item">
-            <span className="score-label">设施</span>
-            <div className="score-bar-track">
-              <div className="score-bar-fill" style={{ width: `${(hotel.rating || 4.5) / 5 * 100}%` }} />
-            </div>
-            <span className="score-num">{hotel.rating || 4.5}</span>
-          </div>
+          {hotel.baiduRating && (
+            <div className="score-source">百度评分 {hotel.baiduRating}{hotel.commentCount ? ` · ${hotel.commentCount}条评价` : ''}</div>
+          )}
+          {[
+            { label: '环境', key: 'environment' },
+            { label: '服务', key: 'service' },
+            { label: '设施', key: 'facility' }
+          ].map(item => {
+            const val = hotel.scores?.[item.key] || hotel.rating || 3.0;
+            return (
+              <div className="score-bar-item" key={item.key}>
+                <span className="score-label">{item.label}</span>
+                <div className="score-bar-track">
+                  <div className="score-bar-fill" style={{ width: `${val / 5 * 100}%` }} />
+                </div>
+                <span className="score-num">{val}</span>
+              </div>
+            );
+          })}
         </div>
 
-        {/* 周边推荐 */}
-        <div className="nearby-section">
-          <div className="nearby-title">周边推荐</div>
-          <div className="nearby-list">
-            {[
-              { name: '市中心商圈', distance: '约1.2km', icon: '🏙️' },
-              { name: '地铁站', distance: '约500m', icon: '🚇' },
-              { name: '热门景点', distance: '约2km', icon: '🏛️' },
-              { name: '美食街', distance: '约800m', icon: '🍜' }
-            ].map((item, i) => (
-              <div key={i} className="nearby-item">
-                <span className="nearby-icon">{item.icon}</span>
-                <div className="nearby-info">
-                  <span className="nearby-name">{item.name}</span>
-                  <span className="nearby-distance">{item.distance}</span>
-                </div>
+        {/* 酒店亮点 */}
+        {(() => {
+          const highlights = [];
+          const br = parseFloat(hotel.baiduOverallRating || hotel.baiduRating) || 0;
+          const cc = parseInt(hotel.baiduCommentNum || hotel.commentCount) || 0;
+          if (br >= 4.5) highlights.push({ label: '优', text: `口碑极佳 · 评分${br}` });
+          if (cc >= 100) highlights.push({ label: '热', text: `热门之选 · ${cc}条真实评价` });
+          if (hotel.brand) highlights.push({ label: '牌', text: `品牌连锁 · ${hotel.brand}` });
+          const amen = (hotel.amenities || []).map(a => String(a));
+          const tags = (hotel.tags || []).map(t => String(t));
+          if (amen.some(a => a.includes('地铁')) || tags.some(t => t.includes('地铁'))) highlights.push({ label: '铁', text: '交通便利 · 近地铁' });
+          if (amen.some(a => a.includes('早餐'))) highlights.push({ label: '早', text: '含早餐 · 省心之选' });
+          if (amen.some(a => a.includes('停车'))) highlights.push({ label: '车', text: '免费停车 · 自驾友好' });
+          if (tags.some(t => t.includes('亲子'))) highlights.push({ label: '亲', text: '亲子出行 · 家庭首选' });
+          if ((hotel.price || 999) < 200 && br >= 4.0) highlights.push({ label: '值', text: '超值推荐 · 好评低价' });
+          if (amen.some(a => a.includes('泳池') || a.includes('游泳'))) highlights.push({ label: '泳', text: '泳池配套 · 休闲度假' });
+          if (br > 0 && br < 4.5 && cc >= 50) highlights.push({ label: '赞', text: `用户好评 · 评分${br}` });
+          const show = highlights.slice(0, 5);
+          if (show.length === 0) return null;
+          return (
+            <div className="highlights-section">
+              <div className="highlights-title">酒店亮点</div>
+              <div className="highlights-list">
+                {show.map((h, i) => (
+                  <div key={i} className="highlight-item">
+                    <span className="highlight-dot">{h.label}</span>
+                    <span className="highlight-text">{h.text}</span>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </div>
+            </div>
+          );
+        })()}
 
         {hotel.phone && (
           <div className="hotel-phone">
@@ -521,8 +520,8 @@ function HotelDetailPage() {
           <Grid columns={4} gap={8}>
             {amenities.map((amenity, index) => (
               <Grid.Item key={index} className="amenity-item">
-                <div className="amenity-icon">
-                  {amenityIcons[amenity] || '✓'}
+                <div className="amenity-icon-circle">
+                  {getAmenityChar(amenity)}
                 </div>
                 <div className="amenity-name">{amenity}</div>
               </Grid.Item>

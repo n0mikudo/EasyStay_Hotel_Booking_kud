@@ -9,7 +9,7 @@
  * @component
  */
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Card,
   Table,
@@ -35,8 +35,10 @@ import './HotelManagement.css';
 
 function AdminHotelManagement() {
   const [hotels, setHotels] = useState([]);
+  const [total, setTotal] = useState(0);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [searchInput, setSearchInput] = useState('');
   const [searchKeyword, setSearchKeyword] = useState('');
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10 });
@@ -51,28 +53,39 @@ function AdminHotelManagement() {
         console.error('解析用户信息失败', e);
       }
     }
-    loadHotels();
+    loadUsers();
   }, []);
+
+  useEffect(() => {
+    loadHotels();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pagination.current, pagination.pageSize, searchKeyword]);
+
+  const loadUsers = async () => {
+    try {
+      const response = await userService.getUsers();
+      if (response.data.success) {
+        setUsers(response.data.data);
+      }
+    } catch { /* ignore */ }
+  };
 
   const loadHotels = async () => {
     try {
       setLoading(true);
-      // 同时加载酒店和用户信息
-      const [hotelResponse, userResponse] = await Promise.all([
-        hotelService.getHotels(),
-        userService.getUsers()
-      ]);
-
-      if (hotelResponse.data.success) {
-        // 只显示已上线和待商户确认的酒店
-        const filteredHotels = hotelResponse.data.data.filter(
-          hotel => hotel.status === 'approved' || hotel.status === 'offline' || hotel.status === 'pending_merchant_confirm'
-        );
-        setHotels(filteredHotels);
+      const params = {
+        status: 'approved,offline,pending_merchant_confirm',
+        page: pagination.current,
+        limit: pagination.pageSize,
+        brief: 'true'
+      };
+      if (searchKeyword && searchKeyword.trim()) {
+        params.keyword = searchKeyword.trim();
       }
-
-      if (userResponse.data.success) {
-        setUsers(userResponse.data.data);
+      const response = await hotelService.getHotels(params);
+      if (response.data.success) {
+        setHotels(response.data.data);
+        setTotal(response.data.total || response.data.count || 0);
       }
     } catch (error) {
       message.error('加载数据失败');
@@ -178,22 +191,7 @@ function AdminHotelManagement() {
     onChange: (keys) => setSelectedRowKeys(keys)
   };
 
-  const filterHotels = useCallback((list, keyword) => {
-    if (!keyword || !keyword.trim()) return list;
-    const k = keyword.trim().toLowerCase();
-    return list.filter((h) => {
-      const name = (h.name || '').toLowerCase();
-      const user = users.find(u => u.id === h.userId);
-      const username = (user?.username || '').toLowerCase();
-      const ownerName = (user?.name || '').toLowerCase();
-      return name.includes(k) || username.includes(k) || ownerName.includes(k);
-    });
-  }, [users]);
-
-  const filteredHotels = useMemo(
-    () => filterHotels(hotels, searchKeyword),
-    [hotels, searchKeyword, filterHotels]
-  );
+  const filteredHotels = hotels;
 
   const getStatusTag = (status) => {
     const statusMap = {
@@ -316,9 +314,11 @@ function AdminHotelManagement() {
             <Input
               placeholder="搜索酒店名、所属用户、所属人姓名（支持模糊匹配）"
               prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
-              value={searchKeyword}
-              onChange={(e) => setSearchKeyword(e.target.value)}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onPressEnter={() => { setSearchKeyword(searchInput); setPagination(prev => ({ ...prev, current: 1 })); }}
               allowClear
+              onClear={() => { setSearchInput(''); setSearchKeyword(''); setPagination(prev => ({ ...prev, current: 1 })); }}
               style={{ maxWidth: 400 }}
             />
           </Col>
@@ -326,7 +326,7 @@ function AdminHotelManagement() {
             <Button
               type="primary"
               icon={<SearchOutlined />}
-              onClick={() => setSearchKeyword(searchKeyword)}
+              onClick={() => { setSearchKeyword(searchInput); setPagination(prev => ({ ...prev, current: 1 })); }}
             >
               搜索
             </Button>
@@ -384,9 +384,10 @@ function AdminHotelManagement() {
           pagination={{
             current: pagination.current,
             pageSize: pagination.pageSize,
+            total: total,
             pageSizeOptions: ['10', '20', '50', '100'],
             showSizeChanger: true,
-            showTotal: (total) => `共 ${total} 条`,
+            showTotal: (t) => `共 ${t} 条`,
             onChange: (page, pageSize) => setPagination({ current: page, pageSize })
           }}
         />

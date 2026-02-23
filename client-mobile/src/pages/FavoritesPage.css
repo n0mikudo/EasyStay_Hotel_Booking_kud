@@ -15,7 +15,7 @@
 }
 
 .fav-content {
-  padding: 16px;
+  padding: var(--spacing-lg);
 }
 
 .fav-loading {
@@ -31,7 +31,7 @@
 .fav-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--spacing-md);
 }
 
 .fav-card {
@@ -42,7 +42,7 @@
 
 .fav-card-inner {
   display: flex;
-  padding: 12px;
+  padding: var(--spacing-md);
 }
 
 .fav-image {
@@ -98,7 +98,7 @@
 }
 
 .fav-price {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--color-accent);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-price);
 }

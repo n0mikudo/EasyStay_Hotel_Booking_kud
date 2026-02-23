@@ -535,8 +535,8 @@ body {
   }
 }
 
-/* 深色模式支持 */
-@media (prefers-color-scheme: dark) {
+/* 深色模式支持（已禁用，默认使用浅色模式） */
+/* @media (prefers-color-scheme: dark) {
   :root {
     --color-background-page: #1f1f1f;
     --color-background-card: #262626;
@@ -544,7 +544,7 @@ body {
     --color-text-secondary: #bfbfbf;
     --color-border: #434343;
   }
-}
+} */
 
 /* 滚动条样式 */
 ::-webkit-scrollbar {

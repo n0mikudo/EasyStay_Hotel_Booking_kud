@@ -162,11 +162,10 @@ function MerchantHotelEntry() {
                   placeholder="请选择酒店星级"
                   className="form-select"
                 >
-                  <Option value={5}>五星级</Option>
-                  <Option value={4}>四星级</Option>
-                  <Option value={3}>三星级</Option>
-                  <Option value={2}>二星级</Option>
-                  <Option value={1}>经济型</Option>
+                  <Option value={5}>豪华型</Option>
+                  <Option value={4}>高档型</Option>
+                  <Option value={3}>舒适型</Option>
+                  <Option value={2}>经济型</Option>
                 </Select>
               </Form.Item>
             </Col>

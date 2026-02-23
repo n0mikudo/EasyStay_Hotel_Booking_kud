@@ -12,6 +12,8 @@ import {
   SetOutline,
   GlobalOutline
 } from 'antd-mobile-icons';
+import { useClientAuth } from '../contexts/ClientAuthContext';
+import LoginSheet from '../components/LoginSheet';
 import './ProfilePage.css';
 
 const THEME_KEY = 'easystay_theme';
@@ -29,7 +31,9 @@ function getEffectiveDark() {
 
 function ProfilePage() {
   const navigate = useNavigate();
+  const { user, isLoggedIn, logout } = useClientAuth();
   const [darkMode, setDarkMode] = useState(getEffectiveDark);
+  const [showLogin, setShowLogin] = useState(false);
 
   useEffect(() => {
     const t = localStorage.getItem(THEME_KEY);
@@ -69,12 +73,20 @@ function ProfilePage() {
         <span className="nav-title">我的</span>
       </NavBar>
 
-      <div className="profile-header">
+      <div className="profile-header" onClick={() => !isLoggedIn && setShowLogin(true)}>
         <div className="profile-avatar">
-          <UserOutline />
+          {isLoggedIn ? (
+            <span className="profile-avatar-text">{user?.nickname?.charAt(0) || '用'}</span>
+          ) : (
+            <UserOutline />
+          )}
         </div>
-        <div className="profile-name">易宿用户</div>
-        <div className="profile-desc">探索心仪酒店，轻松预订</div>
+        <div className="profile-name">{isLoggedIn ? user?.nickname : '点击登录'}</div>
+        <div className="profile-desc">
+          {isLoggedIn
+            ? `${user?.phone?.slice(0, 3)}****${user?.phone?.slice(7)}`
+            : '登录后可保存对话记录'}
+        </div>
       </div>
 
       <div className="profile-menu">
@@ -107,12 +119,26 @@ function ProfilePage() {
           >
             设置
           </List.Item>
+          {isLoggedIn && (
+            <List.Item
+              onClick={() => {
+                logout();
+                Toast.show({ content: '已退出登录', duration: 1500 });
+              }}
+              arrow={false}
+              style={{ textAlign: 'center' }}
+            >
+              <span style={{ color: 'var(--color-error)' }}>退出登录</span>
+            </List.Item>
+          )}
         </List>
       </div>
 
       <div className="profile-footer">
         <div className="version">易宿酒店 v1.0</div>
       </div>
+
+      <LoginSheet visible={showLogin} onClose={() => setShowLogin(false)} />
     </div>
   );
 }

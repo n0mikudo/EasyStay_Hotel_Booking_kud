@@ -39,36 +39,56 @@ import { getLocationCity } from '../utils/geoLocation';
 import CascadingDatePicker from '../components/CascadingDatePicker';
 import './SearchPage.css';
 
+const FILTER_STORAGE_KEY = 'easystay_search_filters';
+
+const loadSavedFilters = () => {
+  try {
+    const raw = sessionStorage.getItem(FILTER_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch { return {}; }
+};
+
+const parseLocalDate = (str) => {
+  if (!str) return null;
+  const [y, m, d] = str.split('-').map(Number);
+  return new Date(y, m - 1, d);
+};
+
 function SearchPage() {
   const navigate = useNavigate();
+  const saved = loadSavedFilters();
 
-  // 核心查询状态
-  const [keyword, setKeyword] = useState('');
-  const [location, setLocation] = useState('');
-  const [checkInDate, setCheckInDate] = useState(null);
-  const [checkOutDate, setCheckOutDate] = useState(null);
-  const [starRating, setStarRating] = useState(null);
-  const [priceRange, setPriceRange] = useState(null);
+  // 核心查询状态 — 从 sessionStorage 恢复
+  const [keyword, setKeyword] = useState(saved.keyword || '');
+  const [location, setLocation] = useState(saved.location || '');
+  const [checkInDate, setCheckInDate] = useState(
+    parseLocalDate(saved.checkIn) || new Date()
+  );
+  const [checkOutDate, setCheckOutDate] = useState(
+    parseLocalDate(saved.checkOut) || new Date(Date.now() + 86400000)
+  );
+  const [starRating, setStarRating] = useState(saved.starRating ?? null);
+  const [priceRange, setPriceRange] = useState(saved.priceRange ?? null);
   const [hotTags, setHotTags] = useState([]);
 
   // UI状态
   const [datePickerVisible, setDatePickerVisible] = useState(false);
-  const [dateType, setDateType] = useState('checkIn'); // 'checkIn' 或 'checkOut'
+  const [dateType, setDateType] = useState('checkIn');
   const [starPickerVisible, setStarPickerVisible] = useState(false);
   const [pricePickerVisible, setPricePickerVisible] = useState(false);
   const [cityPickerVisible, setCityPickerVisible] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
   const [bannerHotels, setBannerHotels] = useState([]);
-  const [bannerLoading, setBannerLoading] = useState(true);
+  const [bannerLoading, setBannerLoading] = useState(false);
+  const [bannerCity, setBannerCity] = useState(saved.bannerCity || null);
 
   // 星级选项（与录入表单一致）
   const starOptions = [
     { label: '不限', value: null },
-    { label: '五星级', value: 5 },
-    { label: '四星级', value: 4 },
-    { label: '三星级', value: 3 },
-    { label: '二星级', value: 2 },
-    { label: '经济型', value: 1 },
+    { label: '豪华型', value: 5 },
+    { label: '高档型', value: 4 },
+    { label: '舒适型', value: 3 },
+    { label: '经济型', value: 2 },
   ];
 
   // 价格区间选项
@@ -80,26 +100,47 @@ function SearchPage() {
     { label: '¥1000以上', value: '1000+' },
   ];
 
-  // 获取Banner酒店数据 + 热门筛选标签（从实际数据统计，保证可匹配）
   useEffect(() => {
-    fetchBannerHotels();
     hotelService.getHotTags(8).then(res => {
       if (res.data.success && res.data.data?.length) setHotTags(res.data.data);
     }).catch(() => {});
+    if (saved.bannerCity && !bannerHotels.length) {
+      fetchCityBanner(saved.bannerCity);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /**
-   * 获取Banner酒店数据
-   */
-  const fetchBannerHotels = async () => {
+  const toLocalDateStr = (date) => {
+    if (!date) return '';
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+
+  useEffect(() => {
+    const data = {
+      keyword,
+      location,
+      checkIn: toLocalDateStr(checkInDate),
+      checkOut: toLocalDateStr(checkOutDate),
+      starRating,
+      priceRange,
+      bannerCity
+    };
+    sessionStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(data));
+  }, [keyword, location, checkInDate, checkOutDate, starRating, priceRange, bannerCity]);
+
+  const fetchCityBanner = async (city) => {
     try {
       setBannerLoading(true);
-      const response = await hotelService.getHotels({ status: 'approved', limit: 5 });
+      const response = await hotelService.getHotels({ status: 'approved', city, limit: 5 });
       if (response.data.success && response.data.data.length > 0) {
         setBannerHotels(response.data.data.slice(0, 5));
+        setBannerCity(city);
       }
     } catch (error) {
-      console.error('获取Banner酒店失败:', error);
+      console.error('获取城市Banner失败:', error);
     } finally {
       setBannerLoading(false);
     }
@@ -115,6 +156,7 @@ function SearchPage() {
       if (result.city) {
         setLocation(result.city);
         Toast.show({ content: `已定位到 ${result.city}`, position: 'center' });
+        if (result.city !== bannerCity) fetchCityBanner(result.city);
       } else {
         Toast.show({ content: result.error || '定位失败', position: 'center', icon: 'fail' });
       }
@@ -125,14 +167,14 @@ function SearchPage() {
     }
   };
 
-  /**
-   * 处理日期选择
-   * @param {Date} date - 选择的日期
-   */
+  const formatDate = (date) => {
+    if (!date) return '';
+    return `${date.getMonth() + 1}/${date.getDate()}`;
+  };
+
   const handleDateConfirm = (date) => {
     if (dateType === 'checkIn') {
       setCheckInDate(date);
-      // 如果离店日期早于入住日期，自动调整
       if (checkOutDate && date >= checkOutDate) {
         const nextDay = new Date(date);
         nextDay.setDate(nextDay.getDate() + 1);
@@ -140,10 +182,7 @@ function SearchPage() {
       }
     } else {
       if (checkInDate && date <= checkInDate) {
-        Toast.show({
-          content: '离店日期必须晚于入住日期',
-          position: 'center',
-        });
+        Toast.show({ content: '离店日期必须晚于入住日期', position: 'center' });
         return;
       }
       setCheckOutDate(date);
@@ -151,27 +190,9 @@ function SearchPage() {
     setDatePickerVisible(false);
   };
 
-  /**
-   * 格式化日期显示
-   * @param {Date} date - 日期对象
-   * @returns {string} 格式化后的日期字符串
-   */
-  const formatDate = (date) => {
-    if (!date) return '';
-    const month = date.getMonth() + 1;
-    const day = date.getDate();
-    return `${month}月${day}日`;
-  };
-
-  /**
-   * 计算入住天数
-   * @returns {number} 入住天数
-   */
-  const getNightsCount = () => {
-    if (!checkInDate || !checkOutDate) return 1;
-    const diffTime = checkOutDate.getTime() - checkInDate.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays > 0 ? diffDays : 1;
+  const appendDateParams = (params) => {
+    if (checkInDate) params.append('checkIn', toLocalDateStr(checkInDate));
+    if (checkOutDate) params.append('checkOut', toLocalDateStr(checkOutDate));
   };
 
   const handleHotSearch = (term) => {
@@ -181,8 +202,7 @@ function SearchPage() {
     const params = new URLSearchParams();
     params.append('keyword', term);
     params.append('city', term);
-    if (checkInDate) params.append('checkIn', checkInDate.toISOString().split('T')[0]);
-    if (checkOutDate) params.append('checkOut', checkOutDate.toISOString().split('T')[0]);
+    appendDateParams(params);
     if (starRating) params.append('star', starRating);
     if (priceRange) params.append('price', priceRange);
     navigate(`/hotels?${params.toString()}`);
@@ -199,8 +219,7 @@ function SearchPage() {
     params.append('keyword', term);
     const cityVal = (location && location !== '请选择城市' && location !== '当前位置') ? location : (hotSearches.includes(term) ? term : '');
     if (cityVal) params.append('city', cityVal);
-    if (checkInDate) params.append('checkIn', checkInDate.toISOString().split('T')[0]);
-    if (checkOutDate) params.append('checkOut', checkOutDate.toISOString().split('T')[0]);
+    appendDateParams(params);
     if (starRating) params.append('star', starRating);
     if (priceRange) params.append('price', priceRange);
     navigate(`/hotels?${params.toString()}`);
@@ -217,7 +236,7 @@ function SearchPage() {
   const SEARCH_HISTORY_KEY = 'easystay_search_history';
   const MAX_HISTORY = 8;
   const hotSearches = ['北京', '上海', '杭州', '成都', '三亚', '西安', '厦门', '丽江'];
-  const [historyRefresh, setHistoryRefresh] = useState(0);
+  const [, setHistoryRefresh] = useState(0);
 
   const getSearchHistory = () => {
     try {
@@ -240,6 +259,20 @@ function SearchPage() {
 
   const searchHistory = getSearchHistory();
 
+  const handleResetAll = () => {
+    setKeyword('');
+    setLocation('');
+    setCheckInDate(new Date());
+    setCheckOutDate(new Date(Date.now() + 86400000));
+    setStarRating(null);
+    setPriceRange(null);
+    setBannerHotels([]);
+    setBannerCity(null);
+    sessionStorage.removeItem(FILTER_STORAGE_KEY);
+    sessionStorage.removeItem('easystay_list_filters');
+    Toast.show({ content: '已重置所有筛选条件', position: 'center' });
+  };
+
   /**
    * 处理查询按钮点击
    */
@@ -255,13 +288,7 @@ function SearchPage() {
       params.append('city', location);
     }
 
-    if (checkInDate) {
-      params.append('checkIn', checkInDate.toISOString().split('T')[0]);
-    }
-
-    if (checkOutDate) {
-      params.append('checkOut', checkOutDate.toISOString().split('T')[0]);
-    }
+    appendDateParams(params);
 
     if (starRating) {
       params.append('star', starRating);
@@ -274,9 +301,18 @@ function SearchPage() {
     navigate(`/hotels?${params.toString()}`);
   };
 
-  /**
-   * 渲染Banner区域
-   */
+  const SEASON_THEMES = [
+    { months: [3,4,5],   title: '春暖花开 · 出发正当时', sub: '全国精选酒店等你探索', gradient: 'linear-gradient(135deg, #059669 0%, #10B981 50%, #34D399 100%)' },
+    { months: [6,7,8],   title: '清凉一夏 · 海滨度假季',  sub: '阳光沙滩，说走就走',    gradient: 'linear-gradient(135deg, #2563EB 0%, #3B82F6 50%, #60A5FA 100%)' },
+    { months: [9,10,11], title: '金秋出行 · 最美在路上',  sub: '秋高气爽，正是好时节',   gradient: 'linear-gradient(135deg, #D97706 0%, #F59E0B 50%, #FBBF24 100%)' },
+    { months: [12,1,2],  title: '冬日暖居 · 温泉养生季',  sub: '暖意融融，享受慢生活',   gradient: 'linear-gradient(135deg, #4338CA 0%, #6D28D9 50%, #7C3AED 100%)' }
+  ];
+
+  const getSeasonTheme = () => {
+    const m = new Date().getMonth() + 1;
+    return SEASON_THEMES.find(t => t.months.includes(m)) || SEASON_THEMES[0];
+  };
+
   const renderBanner = () => {
     if (bannerLoading) {
       return (
@@ -290,61 +326,70 @@ function SearchPage() {
         </div>
       );
     }
-    if (bannerHotels.length === 0) {
+
+    if (bannerHotels.length > 0 && bannerCity) {
       return (
-        <div className="banner-empty" onClick={() => navigate('/hotels')}>
-          <div className="banner-placeholder">
-            <span className="banner-icon">🏨</span>
-            <span className="banner-text">探索精选酒店</span>
-          </div>
+        <div className="banner-container">
+          <Swiper
+            autoplay
+            loop
+            className="banner-swiper"
+            indicator={(total, current) => {
+              const idx = current % bannerHotels.length;
+              return (
+                <div className="banner-indicator">
+                  {bannerHotels.map((_, i) => (
+                    <span key={i} className={`indicator-dot ${i === idx ? 'active' : ''}`} />
+                  ))}
+                </div>
+              );
+            }}
+          >
+            {bannerHotels.map((hotel) => (
+              <Swiper.Item key={hotel.id}>
+                <div
+                  className="banner-item"
+                  onClick={() => handleBannerClick(hotel)}
+                  style={{
+                    backgroundImage: hotel.images && hotel.images.length > 0
+                      ? `url(${hotel.images[0]})`
+                      : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                  }}
+                >
+                  <div className="banner-overlay">
+                    <div className="banner-content">
+                      <div className="banner-badge">{bannerCity}推荐</div>
+                      <h3 className="banner-title">{hotel.name}</h3>
+                      <p className="banner-location">{hotel.city} · {hotel.address}</p>
+                      <div className="banner-price">
+                        <span className="price-symbol">¥</span>
+                        <span className="price-value">{hotel.price}</span>
+                        <span className="price-unit">起/晚</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </Swiper.Item>
+            ))}
+          </Swiper>
         </div>
       );
     }
 
+    const theme = getSeasonTheme();
     return (
       <div className="banner-container">
-        <Swiper
-          autoplay
-          loop
-          className="banner-swiper"
-          indicator={(total, current) => {
-            const idx = bannerHotels.length > 0 ? current % bannerHotels.length : 0;
-            return (
-              <div className="banner-indicator">
-                {bannerHotels.map((_, i) => (
-                  <span key={i} className={`indicator-dot ${i === idx ? 'active' : ''}`} />
-                ))}
-              </div>
-            );
-          }}
+        <div
+          className="banner-item banner-static"
+          onClick={() => navigate('/hotels')}
+          style={{ backgroundImage: theme.gradient }}
         >
-          {bannerHotels.map((hotel) => (
-            <Swiper.Item key={hotel.id}>
-              <div
-                className="banner-item"
-                onClick={() => handleBannerClick(hotel)}
-                style={{
-                  backgroundImage: hotel.images && hotel.images.length > 0
-                    ? `url(${hotel.images[0]})`
-                    : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-                }}
-              >
-                <div className="banner-overlay">
-                  <div className="banner-content">
-                    <div className="banner-badge">精选推荐</div>
-                    <h3 className="banner-title">{hotel.name}</h3>
-                    <p className="banner-location">📍 {hotel.city} · {hotel.address}</p>
-                    <div className="banner-price">
-                      <span className="price-symbol">¥</span>
-                      <span className="price-value">{hotel.price}</span>
-                      <span className="price-unit">起/晚</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </Swiper.Item>
-          ))}
-        </Swiper>
+          <div className="banner-static-content">
+            <h3 className="banner-static-title">{theme.title}</h3>
+            <p className="banner-static-sub">{theme.sub}</p>
+            <div className="banner-static-btn">立即探索</div>
+          </div>
+        </div>
       </div>
     );
   };
@@ -387,44 +432,17 @@ function SearchPage() {
           </div>
         </div>
 
-        {/* 日期选择 */}
-        <div className="form-item date-item">
-          <div className="form-icon">
-            <CalendarOutline />
-          </div>
-          <div className="form-content date-content">
-            <div
-              className="date-block"
-              onClick={() => {
-                setDateType('checkIn');
-                setDatePickerVisible(true);
-              }}
-            >
-              <div className="form-label">入住</div>
-              <div className="form-value">
-                {checkInDate ? formatDate(checkInDate) : '选择日期'}
-              </div>
-            </div>
-            <div className="date-separator">
-              <div className="nights-badge">{getNightsCount()}晚</div>
-            </div>
-            <div
-              className="date-block"
-              onClick={() => {
-                setDateType('checkOut');
-                setDatePickerVisible(true);
-              }}
-            >
-              <div className="form-label">离店</div>
-              <div className="form-value">
-                {checkOutDate ? formatDate(checkOutDate) : '选择日期'}
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* 筛选条件 */}
         <div className="filter-row">
+          <div
+            className="filter-item"
+            onClick={() => setDatePickerVisible(true)}
+          >
+            <CalendarOutline className="filter-icon" />
+            <span className="filter-text">
+              {formatDate(checkInDate)}-{formatDate(checkOutDate)}
+            </span>
+          </div>
           <div
             className="filter-item"
             onClick={() => setStarPickerVisible(true)}
@@ -512,23 +530,48 @@ function SearchPage() {
         </div>
 
         {/* 查询按钮 */}
-        <Button
-          color="primary"
-          size="large"
-          block
-          className="search-btn"
-          onClick={handleSearch}
-        >
-          查询酒店
-        </Button>
+        <div className="search-btn-row">
+          <Button
+            size="large"
+            className="reset-btn"
+            onClick={handleResetAll}
+          >
+            重置
+          </Button>
+          <Button
+            color="primary"
+            size="large"
+            className="search-btn"
+            onClick={handleSearch}
+          >
+            查询酒店
+          </Button>
+        </div>
       </div>
 
-      {/* 日期选择器弹窗 - 级联年月日 */}
+      {/* 日期选择器弹窗 */}
       <Popup
         visible={datePickerVisible}
         onMaskClick={() => setDatePickerVisible(false)}
         bodyStyle={{ height: '50vh', borderTopLeftRadius: 12, borderTopRightRadius: 12 }}
       >
+        <div className="date-picker-tabs">
+          <div
+            className={`date-tab ${dateType === 'checkIn' ? 'active' : ''}`}
+            onClick={() => setDateType('checkIn')}
+          >
+            <span className="date-tab-label">入住</span>
+            <span className="date-tab-value">{checkInDate ? `${checkInDate.getMonth()+1}月${checkInDate.getDate()}日` : '选择'}</span>
+          </div>
+          <div className="date-tab-divider">→</div>
+          <div
+            className={`date-tab ${dateType === 'checkOut' ? 'active' : ''}`}
+            onClick={() => setDateType('checkOut')}
+          >
+            <span className="date-tab-label">离店</span>
+            <span className="date-tab-value">{checkOutDate ? `${checkOutDate.getMonth()+1}月${checkOutDate.getDate()}日` : '选择'}</span>
+          </div>
+        </div>
         <CascadingDatePicker
           embedded
           visible={datePickerVisible}
@@ -544,7 +587,7 @@ function SearchPage() {
       <Popup
         visible={starPickerVisible}
         onMaskClick={() => setStarPickerVisible(false)}
-        bodyStyle={{ height: '40vh' }}
+        bodyStyle={{ maxHeight: '50vh', borderTopLeftRadius: 12, borderTopRightRadius: 12 }}
       >
         <div className="picker-header">
           <span className="picker-title">选择星级</span>
@@ -570,7 +613,7 @@ function SearchPage() {
       <Popup
         visible={pricePickerVisible}
         onMaskClick={() => setPricePickerVisible(false)}
-        bodyStyle={{ height: '40vh' }}
+        bodyStyle={{ maxHeight: '50vh', borderTopLeftRadius: 12, borderTopRightRadius: 12 }}
       >
         <div className="picker-header">
           <span className="picker-title">选择价格区间</span>
@@ -597,7 +640,10 @@ function SearchPage() {
         visible={cityPickerVisible}
         onClose={() => setCityPickerVisible(false)}
         value={location !== '请选择城市' && location !== '当前位置' ? location : ''}
-        onSelect={(city) => setLocation(city)}
+        onSelect={(city) => {
+          setLocation(city);
+          if (city !== bannerCity) fetchCityBanner(city);
+        }}
       />
     </div>
   );

@@ -119,11 +119,30 @@ async function getLocationCityByIP() {
 }
 
 /**
+ * 检查是否在 HTTPS 或 localhost 环境下
+ * @returns {boolean}
+ */
+function isSecureContext() {
+  return window.location.protocol === 'https:' || 
+         window.location.hostname === 'localhost' || 
+         window.location.hostname === '127.0.0.1';
+}
+
+/**
  * 获取当前位置并解析为城市名（需用户主动点击触发）
  * 优先浏览器定位，失败时自动尝试 IP 定位（适合桌面端无 GPS）
  * @returns {Promise<{ city: string }|{ error: string }>}
  */
 export async function getLocationCity() {
+  // 如果不是安全上下文（HTTP 且非 localhost），直接使用 IP 定位
+  if (!isSecureContext()) {
+    const ipResult = await getLocationCityByIP();
+    if (ipResult.city) {
+      return ipResult;
+    }
+    return { error: '当前环境不支持浏览器定位，请使用 HTTPS 访问' };
+  }
+
   if (!navigator.geolocation) {
     return getLocationCityByIP();
   }
@@ -136,18 +155,19 @@ export async function getLocationCity() {
         else resolve({ error: '无法解析当前位置' });
       },
       async (err) => {
-        if (err.code === 1) {
-          resolve({ error: '您已拒绝定位权限' });
-          return;
-        }
-        // 浏览器定位不可用（桌面端常见）时，尝试 IP 定位
+        // 无论什么错误，都尝试 IP 定位
         const ipResult = await getLocationCityByIP();
         if (ipResult.city) {
           resolve(ipResult);
-        } else {
-          const msg = err.code === 2 ? '定位失败，请检查网络或定位服务是否开启' : '定位超时';
-          resolve({ error: msg });
+          return;
         }
+        
+        if (err.code === 1) {
+          resolve({ error: '您已拒绝定位权限，正在使用 IP 定位...' });
+          return;
+        }
+        const msg = err.code === 2 ? '定位失败，请检查网络或定位服务是否开启' : '定位超时';
+        resolve({ error: msg });
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
     );

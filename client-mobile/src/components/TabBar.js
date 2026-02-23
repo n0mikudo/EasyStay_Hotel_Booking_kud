@@ -9,13 +9,15 @@ import {
   AppOutline,
   UnorderedListOutline,
   TravelOutline,
-  UserOutline
+  UserOutline,
+  MessageOutline
 } from 'antd-mobile-icons';
 import './TabBar.css';
 
 const tabs = [
   { key: '/', title: '首页', icon: <AppOutline /> },
-  { key: '/hotels', title: '酒店列表', icon: <TravelOutline /> },
+  { key: '/hotels', title: '酒店', icon: <TravelOutline /> },
+  { key: '/chat', title: 'AI顾问', icon: <MessageOutline /> },
   { key: '/orders', title: '订单', icon: <UnorderedListOutline /> },
   { key: '/profile', title: '我的', icon: <UserOutline /> }
 ];
@@ -29,6 +31,7 @@ function TabBar() {
     if (pathname.startsWith('/orders')) return '/orders';
     if (pathname.startsWith('/profile')) return '/profile';
     if (pathname === '/hotels' || pathname.startsWith('/hotels/')) return '/hotels';
+    if (pathname === '/chat') return '/chat';
     return '/';
   };
 

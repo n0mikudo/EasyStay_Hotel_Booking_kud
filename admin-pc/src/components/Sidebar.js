@@ -204,7 +204,7 @@ function Sidebar() {
           </Button>
           {/* 版本信息 */}
           <p className="version">版本 v1.0.0</p>
-          <p className="copyright">© 2024 易宿平台</p>
+          <p className="copyright">© 2026 易宿平台</p>
         </div>
       )}
     </Sider>
