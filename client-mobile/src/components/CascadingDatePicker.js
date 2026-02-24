@@ -34,7 +34,6 @@ const getMonths = (year, minDate, maxDate) => {
 const getDays = (year, month, minDate, maxDate) => {
   const daysInMonth = new Date(year, month, 0).getDate();
   let minD = 1, maxD = daysInMonth;
-  const date = new Date(year, month - 1, 1);
   if (year === minDate.getFullYear() && month === minDate.getMonth() + 1) {
     minD = minDate.getDate();
   }
@@ -49,8 +48,11 @@ const getDays = (year, month, minDate, maxDate) => {
 };
 
 function CascadingDatePicker({ visible, onClose, value, onConfirm, min, max, title = '选择日期', embedded = false }) {
-  const minDate = min || new Date();
-  const maxDate = max || new Date(minDate.getFullYear() + 2, 11, 31);
+  const minDate = useMemo(() => min || new Date(), [min]);
+  const maxDate = useMemo(
+    () => max || new Date(minDate.getFullYear() + 2, 11, 31),
+    [max, minDate]
+  );
   const initialDate = value || new Date();
 
   const [year, setYear] = useState(initialDate.getFullYear());

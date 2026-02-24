@@ -13,6 +13,7 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
+    "types": ["node", "jest"],
     "jsx": "react-jsx"
   },
   "include": ["src"]

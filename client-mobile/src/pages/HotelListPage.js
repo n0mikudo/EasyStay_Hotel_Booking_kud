@@ -10,7 +10,7 @@
  * @component
  */
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   List,
@@ -62,8 +62,9 @@ const loadSavedListFilters = () => {
 function HotelListPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const searchParamsString = useMemo(() => searchParams.toString(), [searchParams]);
 
-  const hasUrlParams = searchParams.toString().length > 0;
+  const hasUrlParams = searchParamsString.length > 0;
   const savedList = hasUrlParams ? {} : loadSavedListFilters();
 
   // 筛选条件状态 — URL 参数优先，其次 sessionStorage
@@ -128,6 +129,16 @@ function HotelListPage() {
 
   // 筛选弹窗内的最新值（ref 同步更新，解决点击确定时 state 未 flush 导致需点两次的问题）
   const filterValuesRef = useRef({ starRating: '', priceRange: '' });
+  const loadingRef = useRef(false);
+  const pageRef = useRef(1);
+  const queryStateRef = useRef({
+    keyword: '',
+    city: '',
+    starRating: '',
+    priceRange: '',
+    sortBy: 'default',
+    searchParamsString: ''
+  });
 
   // 持久化筛选条件到 sessionStorage
   useEffect(() => {
@@ -146,17 +157,37 @@ function HotelListPage() {
     }
   }, [filterVisible, starRating, priceRange]);
 
+  useEffect(() => {
+    loadingRef.current = loading;
+  }, [loading]);
+
+  useEffect(() => {
+    pageRef.current = page;
+  }, [page]);
+
+  useEffect(() => {
+    queryStateRef.current = {
+      keyword,
+      city,
+      starRating,
+      priceRange,
+      sortBy,
+      searchParamsString
+    };
+  }, [keyword, city, starRating, priceRange, sortBy, searchParamsString]);
+
   // 当URL参数变化时同步状态
   useEffect(() => {
-    setKeyword(searchParams.get('keyword') || '');
-    setCity(searchParams.get('city') || '');
-    const checkIn = parseLocalDate(searchParams.get('checkIn'));
-    const checkOut = parseLocalDate(searchParams.get('checkOut'));
+    const params = new URLSearchParams(searchParamsString);
+    setKeyword(params.get('keyword') || '');
+    setCity(params.get('city') || '');
+    const checkIn = parseLocalDate(params.get('checkIn'));
+    const checkOut = parseLocalDate(params.get('checkOut'));
     if (checkIn) setCheckInDate(checkIn);
     if (checkOut) setCheckOutDate(checkOut);
-    setStarRating(searchParams.get('star') || '');
-    setPriceRange(searchParams.get('price') || '');
-  }, [searchParams]);
+    setStarRating(params.get('star') || '');
+    setPriceRange(params.get('price') || '');
+  }, [searchParamsString]);
 
   // 进入页面或搜索条件变化时，滚动到顶部
   useEffect(() => {
@@ -167,7 +198,7 @@ function HotelListPage() {
     };
     scrollToTop();
     requestAnimationFrame(scrollToTop);
-  }, [searchParams.toString()]);
+  }, [searchParamsString]);
 
   // 回到顶部按钮显示逻辑
   useEffect(() => {
@@ -176,11 +207,6 @@ function HotelListPage() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // 仅当 URL 参数变化时加载（排序由点击直接触发 loadHotels，不依赖此 effect）
-  useEffect(() => {
-    loadHotels(true);
-  }, [searchParams.toString()]);
-
   /**
    * 加载酒店列表
    * @param {boolean} reset - 是否重置列表
@@ -188,22 +214,25 @@ function HotelListPage() {
    * @param {string} overrides.sort - 排序方式
    * @param {Object} overrides.filters - 筛选条件 { keyword, city, star, price, tags }
    */
-  const loadHotels = async (reset = false, overrides = {}) => {
+  const loadHotels = useCallback(async (reset = false, overrides = {}) => {
     // 用户主动点击（排序/筛选）时，即使 loading 中也执行，避免需点两次
     const isUserClick = reset && (overrides.sort !== undefined || overrides.filters);
-    if (loading && !isUserClick) return;
+    if (loadingRef.current && !isUserClick) return;
 
     try {
       setLoading(true);
-      const currentPage = reset ? 1 : page;
+      loadingRef.current = true;
+      const currentPage = reset ? 1 : pageRef.current;
+      const queryState = queryStateRef.current;
+      const paramsFromUrl = new URLSearchParams(queryState.searchParamsString);
 
       // 优先使用 overrides 中的值（点击时立即生效），否则从 state/searchParams 读取
       const filters = overrides.filters || {};
-      const kw = filters.keyword !== undefined ? filters.keyword : (searchParams.get('keyword') || keyword);
-      const c = filters.city !== undefined ? filters.city : (searchParams.get('city') || city);
-      const star = filters.star !== undefined ? filters.star : (searchParams.get('star') || starRating);
-      const price = filters.price !== undefined ? filters.price : (searchParams.get('price') || priceRange);
-      const sort = overrides.sort !== undefined ? overrides.sort : sortBy;
+      const kw = filters.keyword !== undefined ? filters.keyword : (paramsFromUrl.get('keyword') || queryState.keyword);
+      const c = filters.city !== undefined ? filters.city : (paramsFromUrl.get('city') || queryState.city);
+      const star = filters.star !== undefined ? filters.star : (paramsFromUrl.get('star') || queryState.starRating);
+      const price = filters.price !== undefined ? filters.price : (paramsFromUrl.get('price') || queryState.priceRange);
+      const sort = overrides.sort !== undefined ? overrides.sort : queryState.sortBy;
 
       const params = {
         status: 'approved',
@@ -226,9 +255,14 @@ function HotelListPage() {
         if (reset) {
           setHotels(newHotels);
           setPage(2);
+          pageRef.current = 2;
         } else {
           setHotels(prev => [...prev, ...newHotels]);
-          setPage(prev => prev + 1);
+          setPage(prev => {
+            const next = prev + 1;
+            pageRef.current = next;
+            return next;
+          });
         }
 
         setHasMore(newHotels.length === 10);
@@ -240,8 +274,14 @@ function HotelListPage() {
       });
     } finally {
       setLoading(false);
+      loadingRef.current = false;
     }
-  };
+  }, []);
+
+  // 仅当 URL 参数变化时加载（排序由点击直接触发 loadHotels，不依赖此 effect）
+  useEffect(() => {
+    loadHotels(true);
+  }, [searchParamsString, loadHotels]);
 
   /**
    * 手动点击加载更多

@@ -11,7 +11,7 @@
  * @component
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   NavBar,
@@ -85,37 +85,7 @@ function HotelDetailPage() {
   };
 
   // 加载酒店详情
-  useEffect(() => {
-    loadHotelDetail();
-  }, [id]);
-
-  // 酒店加载后默认选中最便宜房型
-  useEffect(() => {
-    if (!hotel) {
-      setSelectedRoomType(null);
-      return;
-    }
-    if (hotel.roomTypes && hotel.roomTypes.length > 0) {
-      const sorted = [...hotel.roomTypes].sort((a, b) => (a.price || 0) - (b.price || 0));
-      setSelectedRoomType(sorted[0]);
-    } else if (hotel.price) {
-      setSelectedRoomType({ name: '标准间', price: hotel.price });
-    } else {
-      setSelectedRoomType(null);
-    }
-  }, [hotel?.id]);
-
-  useEffect(() => {
-    if (id) {
-      const favs = getFavorites();
-      setIsFavorite(favs.includes(id));
-    }
-  }, [id]);
-
-  /**
-   * 加载酒店详情
-   */
-  const loadHotelDetail = async () => {
+  const loadHotelDetail = useCallback(async () => {
     try {
       setLoading(true);
       const response = await hotelService.getHotelById(id);
@@ -137,7 +107,34 @@ function HotelDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, navigate]);
+
+  useEffect(() => {
+    loadHotelDetail();
+  }, [loadHotelDetail]);
+
+  // 酒店加载后默认选中最便宜房型
+  useEffect(() => {
+    if (!hotel) {
+      setSelectedRoomType(null);
+      return;
+    }
+    if (hotel.roomTypes && hotel.roomTypes.length > 0) {
+      const sorted = [...hotel.roomTypes].sort((a, b) => (a.price || 0) - (b.price || 0));
+      setSelectedRoomType(sorted[0]);
+    } else if (hotel.price) {
+      setSelectedRoomType({ name: '标准间', price: hotel.price });
+    } else {
+      setSelectedRoomType(null);
+    }
+  }, [hotel]);
+
+  useEffect(() => {
+    if (id) {
+      const favs = getFavorites();
+      setIsFavorite(favs.includes(id));
+    }
+  }, [id]);
 
   /**
    * 处理收藏 - 持久化到 localStorage

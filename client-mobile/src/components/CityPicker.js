@@ -21,8 +21,6 @@ function CityPicker({ visible, onClose, value, onSelect }) {
     return cityDataNested.find(p => p.label === selectedProvince);
   }, [selectedProvince]);
 
-  const cities = currentProvince?.children || [];
-
   const filteredProvinces = useMemo(() => {
     if (!keyword.trim()) return cityDataNested;
     const kw = keyword.trim().toLowerCase();
@@ -34,10 +32,11 @@ function CityPicker({ visible, onClose, value, onSelect }) {
 
   const filteredCities = useMemo(() => {
     if (!currentProvince) return [];
-    if (!keyword.trim()) return cities;
+    const currentCities = currentProvince.children || [];
+    if (!keyword.trim()) return currentCities;
     const kw = keyword.trim().toLowerCase();
-    return cities.filter(c => c.label.toLowerCase().includes(kw));
-  }, [currentProvince, cities, keyword]);
+    return currentCities.filter(c => c.label.toLowerCase().includes(kw));
+  }, [currentProvince, keyword]);
 
   const handleSelectProvince = (prov) => {
     setSelectedProvince(prov.label);

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { NavBar, Input, Button, DotLoading, Toast, Switch } from 'antd-mobile';
 import { SendOutline, AddOutline, UnorderedListOutline } from 'antd-mobile-icons';
 import { useClientAuth } from '../contexts/ClientAuthContext';
-import { chatSessionService } from '../services/api';
+import { chatSessionService, getApiBaseUrl } from '../services/api';
 import LoginSheet from '../components/LoginSheet';
 import ChatHistoryDrawer from '../components/ChatHistoryDrawer';
 import ReactMarkdown from 'react-markdown';
@@ -155,11 +155,6 @@ function ChatPage() {
     }
   };
 
-  const getApiBaseUrl = () => {
-    if (process.env.REACT_APP_API_URL) return process.env.REACT_APP_API_URL;
-    return '/api';
-  };
-
   const clearWaitTimers = () => {
     waitTimersRef.current.forEach(t => clearTimeout(t));
     waitTimersRef.current = [];
@@ -279,9 +274,10 @@ function ChatPage() {
                 clearWaitTimers();
               }
               fullContent += data.content;
+              const nextContent = fullContent;
               setMessages(prev => {
                 const updated = [...prev];
-                updated[updated.length - 1] = { role: 'assistant', content: fullContent, streaming: true };
+                updated[updated.length - 1] = { role: 'assistant', content: nextContent, streaming: true };
                 return updated;
               });
             }

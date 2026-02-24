@@ -13,6 +13,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, Form, Input, Button, Switch, message, Table, Tag, Timeline } from 'antd';
 import { SettingOutlined, LockOutlined, SaveOutlined, SafetyCertificateOutlined, CopyOutlined, CheckCircleOutlined, CloseCircleOutlined, ReloadOutlined, HistoryOutlined } from '@ant-design/icons';
 import { inviteCodeService, settingsService, systemService } from '../services/api';
+import { resolveUserIdentity } from '../utils/userIdentity';
 
 
 const ACTION_LABELS = {
@@ -32,6 +33,7 @@ function AdminSettings() {
   const [permissions, setPermissions] = useState([]);
   const [logs, setLogs] = useState([]);
   const [logsLoading, setLogsLoading] = useState(false);
+  const { user: currentUser } = resolveUserIdentity();
 
   useEffect(() => {
     loadSettings();
@@ -78,7 +80,7 @@ function AdminSettings() {
   };
 
   const handleGenerateInviteCode = async () => {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const user = currentUser || {};
     if (!user.id) {
       message.error('请先登录');
       return;
@@ -119,7 +121,7 @@ function AdminSettings() {
   };
 
   const handleSubmit = async (values) => {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const user = currentUser || {};
     try {
       setLoading(true);
       const res = await settingsService.updateSettings({

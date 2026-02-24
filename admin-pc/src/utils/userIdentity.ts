@@ -1,9 +1,6 @@
-type UserLike = {
-  id?: string | number;
-  userId?: string | number;
-  merchantId?: string | number;
-  role?: string;
-} | null;
+import type { UserProfile } from '../types/domain';
+
+type UserLike = UserProfile | null;
 
 export function getStoredUser(): UserLike {
   try {

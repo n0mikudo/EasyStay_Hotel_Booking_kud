@@ -10,7 +10,7 @@
 
 import axios from 'axios';
 
-const getApiBaseUrl = () => {
+export const getApiBaseUrl = () => {
   if (process.env.REACT_APP_API_URL) {
     return process.env.REACT_APP_API_URL;
   }
@@ -20,6 +20,19 @@ const getApiBaseUrl = () => {
 };
 
 const API_BASE_URL = getApiBaseUrl();
+const isDev = process.env.NODE_ENV !== 'production';
+
+export const getApiErrorMessage = (error) => {
+  if (error?.response?.data?.message) return error.response.data.message;
+  if (error?.response?.status) return `HTTP ${error.response.status}`;
+  if (error?.request) return '网络错误: 无法连接到服务器';
+  return error?.message || '未知错误';
+};
+
+export const logApiError = (scope, error) => {
+  const msg = getApiErrorMessage(error);
+  console.error(`[${scope}] ${msg}`);
+};
 
 /**
  * 创建axios实例
@@ -38,7 +51,10 @@ const api = axios.create({
  */
 api.interceptors.request.use(
   (config) => {
-    // 可以在这里添加认证信息
+    if (isDev) {
+      // 仅开发环境打印请求日志，避免生产日志噪音
+      console.log('API请求:', config.method?.toUpperCase(), config.url);
+    }
     return config;
   },
   (error) => {
@@ -55,16 +71,7 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    if (error.response) {
-      // 服务器返回错误状态码
-      console.error('API错误:', error.response.data);
-    } else if (error.request) {
-      // 请求发出但没有收到响应
-      console.error('网络错误: 无法连接到服务器');
-    } else {
-      // 请求配置出错
-      console.error('请求错误:', error.message);
-    }
+    logApiError('api', error);
     return Promise.reject(error);
   }
 );

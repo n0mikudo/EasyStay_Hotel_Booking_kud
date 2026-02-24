@@ -27,6 +27,7 @@ import {
   MessageOutlined,
   UserOutlined
 } from '@ant-design/icons';
+import { getStoredUser } from '../utils/userIdentity';
 import './Sidebar.css';
 
 const { Sider } = Layout;
@@ -36,8 +37,7 @@ const { Sider } = Layout;
  * @returns {Object|null} 用户信息
  */
 const getCurrentUser = () => {
-  const userStr = localStorage.getItem('user');
-  return userStr ? JSON.parse(userStr) : null;
+  return getStoredUser();
 };
 
 /**

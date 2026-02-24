@@ -6,7 +6,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { NavBar, List, Switch, Toast, Dialog } from 'antd-mobile';
 import {
-  SetOutline,
   GlobalOutline,
   UnorderedListOutline,
   FileOutline,
@@ -16,7 +15,6 @@ import {
 import './SettingsPage.css';
 
 const THEME_KEY = 'easystay_theme';
-const THEME_AUTO = 'auto';
 
 function SettingsPage() {
   const navigate = useNavigate();

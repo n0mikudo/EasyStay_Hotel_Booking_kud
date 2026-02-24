@@ -23,7 +23,7 @@ const getErrorMessage = (error) => {
  * 获取API基础URL
  * 优先使用环境变量，否则使用默认值
  */
-const getApiBaseUrl = () => {
+export const getApiBaseUrl = () => {
   // 检查是否有环境变量配置
   if (process.env.REACT_APP_API_URL) {
     return process.env.REACT_APP_API_URL;
@@ -138,10 +138,7 @@ export const bookingService = {
 };
 
 export const chatService = {
-  getApiBaseUrl: () => {
-    if (process.env.REACT_APP_API_URL) return process.env.REACT_APP_API_URL;
-    return '/api';
-  }
+  getApiBaseUrl
 };
 
 export const clientAuthService = {

@@ -31,6 +31,7 @@ import BookingManagement from './pages/BookingManagement';
 import MerchantMessageCenter from './pages/MerchantMessageCenter';
 import Sidebar from './components/Sidebar';
 import NotificationDropdown from './components/NotificationDropdown';
+import { getStoredUser } from './utils/userIdentity';
 import './App.css';
 
 const { Content } = Layout;
@@ -40,8 +41,7 @@ const { Content } = Layout;
  * @returns {Object|null} 用户信息
  */
 const getCurrentUser = () => {
-  const userStr = localStorage.getItem('user');
-  return userStr ? JSON.parse(userStr) : null;
+  return getStoredUser();
 };
 
 /**
@@ -146,12 +146,13 @@ function App() {
  * 管理员布局
  */
 function AdminLayout({ onLogout, user }) {
+  const effectiveUser = user || getStoredUser() || {};
   return (
     <Layout className="app-layout">
       <Sidebar />
       <Layout className="main-layout">
         <div className="layout-header-bar">
-          <NotificationDropdown user={user || JSON.parse(localStorage.getItem('user') || '{}')} />
+          <NotificationDropdown user={effectiveUser} />
         </div>
         <Content className="main-content">
           <Routes>
@@ -175,12 +176,13 @@ function AdminLayout({ onLogout, user }) {
  * 商户布局
  */
 function MerchantLayout({ onLogout, user }) {
+  const effectiveUser = user || getStoredUser() || {};
   return (
     <Layout className="app-layout">
       <Sidebar />
       <Layout className="main-layout">
         <div className="layout-header-bar">
-          <NotificationDropdown user={user || JSON.parse(localStorage.getItem('user') || '{}')} />
+          <NotificationDropdown user={effectiveUser} />
         </div>
         <Content className="main-content">
           <Routes>

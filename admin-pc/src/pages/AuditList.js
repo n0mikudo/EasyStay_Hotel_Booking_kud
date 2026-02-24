@@ -37,6 +37,7 @@ import {
   ClockCircleOutlined
 } from '@ant-design/icons';
 import { hotelService } from '../services/api';
+import { resolveUserIdentity } from '../utils/userIdentity';
 import './AuditList.css';
 
 function AuditList() {
@@ -49,14 +50,8 @@ function AuditList() {
   const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
-    const user = localStorage.getItem('user');
-    if (user) {
-      try {
-        setCurrentUser(JSON.parse(user));
-      } catch (e) {
-        console.error('解析用户信息失败', e);
-      }
-    }
+    const { user } = resolveUserIdentity();
+    setCurrentUser(user || null);
   }, []);
 
   // 组件挂载时获取数据

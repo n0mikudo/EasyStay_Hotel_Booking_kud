@@ -32,6 +32,7 @@ import {
 } from '@ant-design/icons';
 import { hotelService, userService } from '../services/api';
 import { getHotelRatingLabel } from '../utils/hotelRating';
+import { resolveUserIdentity } from '../utils/userIdentity';
 import './HotelManagement.css';
 
 function AdminHotelManagement() {
@@ -48,14 +49,8 @@ function AdminHotelManagement() {
   const [showOffline, setShowOffline] = useState(true);
 
   useEffect(() => {
-    const user = localStorage.getItem('user');
-    if (user) {
-      try {
-        setCurrentUser(JSON.parse(user));
-      } catch (e) {
-        console.error('解析用户信息失败', e);
-      }
-    }
+    const { user } = resolveUserIdentity();
+    setCurrentUser(user || null);
     loadUsers();
   }, []);
 

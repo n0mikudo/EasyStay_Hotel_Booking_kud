@@ -2,7 +2,7 @@
  * 订单详情页
  * 展示订单完整信息：下单时间、酒店信息、入住/离店、房型、价格等
  */
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   NavBar,
@@ -34,11 +34,7 @@ function OrderDetailPage() {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadOrder();
-  }, [id]);
-
-  const loadOrder = async () => {
+  const loadOrder = useCallback(async () => {
     try {
       setLoading(true);
       const res = await bookingService.getBookingById(id);
@@ -54,7 +50,11 @@ function OrderDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, navigate]);
+
+  useEffect(() => {
+    loadOrder();
+  }, [loadOrder]);
 
   const handleCancelOrder = () => {
     Dialog.confirm({

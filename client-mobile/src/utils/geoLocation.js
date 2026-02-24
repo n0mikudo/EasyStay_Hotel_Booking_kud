@@ -16,10 +16,38 @@ function toCityFormat(name) {
   return /[市地区州]$/.test(s) ? s : s + '市';
 }
 
+function hasGarbledChars(text) {
+  if (!text) return false;
+  return String(text).includes('�');
+}
+
+function decodeMojibake(text) {
+  if (!text) return text;
+  const raw = String(text);
+  try {
+    // 常见 latin1/utf8 错位修复（如 æ­¦æ± -> 武汉）
+    const repaired = decodeURIComponent(escape(raw));
+    return repaired || raw;
+  } catch {
+    return raw;
+  }
+}
+
+function normalizeCityText(name) {
+  if (!name) return '';
+  const repaired = decodeMojibake(name);
+  return String(repaired).trim();
+}
+
 function matchCity(name) {
-  const formatted = toCityFormat(name);
+  const normalized = normalizeCityText(name);
+  const formatted = toCityFormat(normalized);
   if (!formatted) return null;
-  const m = flatCities.find(f => f.label === formatted || f.label.includes(name) || name.includes(f.label.replace(/[市地区州]$/, '')));
+  const m = flatCities.find(
+    f => f.label === formatted ||
+      f.label.includes(normalized) ||
+      normalized.includes(f.label.replace(/[市地区州]$/, ''))
+  );
   return m ? m.label : formatted;
 }
 
@@ -32,7 +60,7 @@ function parseCityFromData(data) {
 
   const candidates = [city, locality, province].filter(Boolean);
   for (const c of candidates) {
-    const name = String(c).trim();
+    const name = normalizeCityText(c);
     if (!name) continue;
     const withSuffix = name.endsWith('市') || name.endsWith('地区') || name.endsWith('州') ? name : name + '市';
     const match = flatCities.find(
@@ -42,7 +70,7 @@ function parseCityFromData(data) {
     if (flatCities.some(f => f.label === withSuffix)) return withSuffix;
   }
 
-  const first = (city || locality || province).trim();
+  const first = normalizeCityText(city || locality || province);
   if (first) {
     const withSuffix = first.endsWith('市') || first.endsWith('地区') || first.endsWith('州') ? first : first + '市';
     return withSuffix;
@@ -68,7 +96,7 @@ export async function reverseGeocode(lat, lng) {
       const json = await res.json();
       if (json.success && json.data && json.data.city) {
         const c = matchCity(json.data.city);
-        if (c) return c;
+        if (c && !hasGarbledChars(c)) return c;
       }
     }
   } catch { /* 继续备用 */ }
@@ -112,7 +140,7 @@ async function getLocationCityByIP() {
     const json = await res.json();
     if (json.success && json.data && json.data.city) {
       const c = matchCity(json.data.city) || toCityFormat(json.data.city);
-      if (c) return { city: c };
+      if (c && !hasGarbledChars(c)) return { city: c };
     }
   } catch { /* 忽略 */ }
   return { error: 'IP 定位失败' };

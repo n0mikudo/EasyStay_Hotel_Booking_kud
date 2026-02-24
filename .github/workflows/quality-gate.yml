@@ -1,0 +1,49 @@
+name: Quality Gate
+
+on:
+  pull_request:
+    branches: ["main"]
+  push:
+    branches: ["main"]
+
+jobs:
+  mobile-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: client-mobile/package-lock.json
+
+      - name: Install mobile deps
+        run: npm ci --prefix client-mobile
+
+      - name: Build mobile
+        run: CI= npm run build --prefix client-mobile
+
+  admin-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: admin-pc/package-lock.json
+
+      - name: Install admin deps
+        run: npm ci --prefix admin-pc
+
+      - name: Typecheck admin
+        run: npm run typecheck --prefix admin-pc
+
+      - name: Build admin
+        run: CI= npm run build --prefix admin-pc

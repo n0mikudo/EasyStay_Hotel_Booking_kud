@@ -22,7 +22,6 @@ import {
   Toast,
   NavBar,
   Tag,
-  Swiper,
   Popup
 } from 'antd-mobile';
 import {
@@ -40,6 +39,8 @@ import CascadingDatePicker from '../components/CascadingDatePicker';
 import './SearchPage.css';
 
 const FILTER_STORAGE_KEY = 'easystay_search_filters';
+const HERO_BANNER_IMAGE = '/图片/图片1.png';
+const HERO_POSTER_IMAGE = '/图片/图片2.png';
 
 const loadSavedFilters = () => {
   try {
@@ -324,80 +325,46 @@ function SearchPage() {
   };
 
   const renderBanner = () => {
-    if (bannerLoading) {
-      return (
-        <div className="banner-skeleton">
-          <div className="skeleton-shimmer" />
-          <div className="skeleton-content">
-            <div className="skeleton-line w60" />
-            <div className="skeleton-line w80" />
-            <div className="skeleton-line w40" />
+    const theme = getSeasonTheme();
+    const hasCityRecommend = bannerHotels.length > 0 && bannerCity;
+    return (
+      <div className="hero-stack">
+        <div
+          className="banner-container banner-visual-hero"
+          onClick={() => navigate('/hotels')}
+          style={{
+            backgroundImage: `linear-gradient(120deg, rgba(23, 32, 58, 0.18), rgba(76, 29, 149, 0.12)), url(${HERO_BANNER_IMAGE})`
+          }}
+        >
+          <div className="hero-main-overlay">
+            <div className="hero-main-copy">
+              <h3 className="hero-main-title">{theme.title}</h3>
+              <p className="hero-main-sub">{theme.sub}</p>
+              {hasCityRecommend && (
+                <p className="hero-recommend-text">
+                  当前已为你匹配 {bannerCity} 热门酒店 {bannerLoading ? '（更新中）' : ''}
+                </p>
+              )}
+              <div className="hero-main-btn">立即探索</div>
+            </div>
+            <div className="hero-main-badges">
+              <span>温泉度假</span>
+              <span>雪景木屋</span>
+              <span>亲子友好</span>
+            </div>
           </div>
         </div>
-      );
-    }
 
-    if (bannerHotels.length > 0 && bannerCity) {
-      return (
-        <div className="banner-container">
-          <Swiper
-            autoplay
-            loop
-            className="banner-swiper"
-            indicator={(total, current) => {
-              const idx = current % bannerHotels.length;
-              return (
-                <div className="banner-indicator">
-                  {bannerHotels.map((_, i) => (
-                    <span key={i} className={`indicator-dot ${i === idx ? 'active' : ''}`} />
-                  ))}
-                </div>
-              );
-            }}
-          >
-            {bannerHotels.map((hotel) => (
-              <Swiper.Item key={hotel.id}>
-                <div
-                  className="banner-item"
-                  onClick={() => handleBannerClick(hotel)}
-                  style={{
-                    backgroundImage: hotel.images && hotel.images.length > 0
-                      ? `url(${hotel.images[0]})`
-                      : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-                  }}
-                >
-                  <div className="banner-overlay">
-                    <div className="banner-content">
-                      <div className="banner-badge">{bannerCity}推荐</div>
-                      <h3 className="banner-title">{hotel.name}</h3>
-                      <p className="banner-location">{hotel.city} · {hotel.address}</p>
-                      <div className="banner-price">
-                        <span className="price-symbol">¥</span>
-                        <span className="price-value">{hotel.price}</span>
-                        <span className="price-unit">起/晚</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </Swiper.Item>
-            ))}
-          </Swiper>
-        </div>
-      );
-    }
-
-    const theme = getSeasonTheme();
-    return (
-      <div className="banner-container">
         <div
-          className="banner-item banner-static"
+          className="hero-poster-card"
           onClick={() => navigate('/hotels')}
-          style={{ backgroundImage: theme.gradient }}
+          style={{
+            backgroundImage: `linear-gradient(180deg, rgba(255,255,255,0.16), rgba(15,23,42,0.24)), url(${HERO_POSTER_IMAGE})`
+          }}
         >
-          <div className="banner-static-content">
-            <h3 className="banner-static-title">{theme.title}</h3>
-            <p className="banner-static-sub">{theme.sub}</p>
-            <div className="banner-static-btn">立即探索</div>
+          <div className="hero-poster-content">
+            <div className="hero-poster-title">冬日暖居</div>
+            <div className="hero-poster-sub">让心灵找到归宿</div>
           </div>
         </div>
       </div>

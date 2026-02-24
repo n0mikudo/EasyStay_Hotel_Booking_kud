@@ -23,6 +23,7 @@ import {
 } from '@ant-design/icons';
 import { hotelService, userService } from '../services/api';
 import { getHotelRatingLabel } from '../utils/hotelRating';
+import { resolveUserIdentity } from '../utils/userIdentity';
 import './AuditList.css';
 
 const STATUS_OPTIONS = [
@@ -55,6 +56,7 @@ function AdminAuditList({ user }) {
   const [rejectModalVisible, setRejectModalVisible] = useState(false);
   const [rejectHotelId, setRejectHotelId] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
+  const { user: storedUser } = resolveUserIdentity();
 
   useEffect(() => {
     loadUsers();
@@ -101,7 +103,7 @@ function AdminAuditList({ user }) {
 
   const handleAudit = async (id, status, reason = '') => {
     try {
-      const effectiveUser = user || JSON.parse(localStorage.getItem('user') || '{}');
+      const effectiveUser = user || storedUser || {};
       const adminInfo = { id: effectiveUser.id, username: effectiveUser.name || effectiveUser.username };
       const response = await hotelService.auditHotel(id, status, reason, adminInfo);
       if (response.data.success) {

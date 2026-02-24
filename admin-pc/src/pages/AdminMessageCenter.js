@@ -33,6 +33,7 @@ import {
   DeleteOutlined
 } from '@ant-design/icons';
 import messageService from '../services/messageService';
+import { resolveUserIdentity } from '../utils/userIdentity';
 import './AdminMessageCenter.css';
 
 const { Text } = Typography;
@@ -50,7 +51,8 @@ function AdminMessageCenter({ user }) {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('pending');
-  const effectiveUser = user || (typeof localStorage !== 'undefined' ? JSON.parse(localStorage.getItem('user') || '{}') : {});
+  const { user: storedUser } = resolveUserIdentity();
+  const effectiveUser = user || storedUser || {};
 
   const loadMessages = useCallback(async () => {
     if (!effectiveUser?.id || effectiveUser?.role !== 'admin') return;
