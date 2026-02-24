@@ -39,8 +39,8 @@ import CascadingDatePicker from '../components/CascadingDatePicker';
 import './SearchPage.css';
 
 const FILTER_STORAGE_KEY = 'easystay_search_filters';
-const HERO_BANNER_IMAGE = '/图片/图片1.png';
-const HERO_POSTER_IMAGE = '/图片/图片2.png';
+const HERO_BANNER_IMAGE = '/mobile/图片/图片1.png';
+const HERO_POSTER_IMAGE = '/mobile/图片/图片2.png';
 
 const loadSavedFilters = () => {
   try {
