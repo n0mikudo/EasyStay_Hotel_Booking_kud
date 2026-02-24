@@ -22,6 +22,7 @@ import {
   Toast,
   NavBar,
   Tag,
+  Swiper,
   Popup
 } from 'antd-mobile';
 import {
@@ -40,7 +41,6 @@ import './SearchPage.css';
 
 const FILTER_STORAGE_KEY = 'easystay_search_filters';
 const HERO_BANNER_IMAGE = '/mobile/图片/图片1.png';
-const HERO_POSTER_IMAGE = '/mobile/图片/图片2.png';
 
 const loadSavedFilters = () => {
   try {
@@ -314,16 +314,6 @@ function SearchPage() {
     return SEASON_THEMES.find(t => t.months.includes(m)) || SEASON_THEMES[0];
   };
 
-  const getJourneyPhrase = () => {
-    const phrases = [
-      '住进城市烟火里，感受一晚人间温度',
-      '行程不赶，先给自己一处安稳落脚',
-      '地铁、早餐、夜景，刚好是你想要的节奏'
-    ];
-    const idx = new Date().getDate() % phrases.length;
-    return phrases[idx];
-  };
-
   const renderBanner = () => {
     const theme = getSeasonTheme();
     const hasCityRecommend = bannerHotels.length > 0 && bannerCity;
@@ -354,19 +344,6 @@ function SearchPage() {
             </div>
           </div>
         </div>
-
-        <div
-          className="hero-poster-card"
-          onClick={() => navigate('/hotels')}
-          style={{
-            backgroundImage: `linear-gradient(180deg, rgba(255,255,255,0.16), rgba(15,23,42,0.24)), url(${HERO_POSTER_IMAGE})`
-          }}
-        >
-          <div className="hero-poster-content">
-            <div className="hero-poster-title">冬日暖居</div>
-            <div className="hero-poster-sub">让心灵找到归宿</div>
-          </div>
-        </div>
       </div>
     );
   };
@@ -385,33 +362,60 @@ function SearchPage() {
         <div className="section-header">
           <div className="title">旅居灵感</div>
         </div>
-        <div className="journey-copy">{getJourneyPhrase()}</div>
-        <div className="journey-meta">
-          <span>{getSeasonTheme().title}</span>
-          <span className="dot">•</span>
-          <span>甄选真实住客高分酒店</span>
-        </div>
+        <div className="journey-copy artistic-center">行程不赶，先给自己一处安稳落脚</div>
       </div>
 
-      {bannerHotels[0] && (
-        <div className="featured-hotel story-card" onClick={() => handleBannerClick(bannerHotels[0])}>
+      {bannerHotels.length > 0 && (
+        <div className="featured-carousel story-card">
           <div className="section-header">
             <div className="title">今日推荐</div>
-            <span className="sub">点击查看详情</span>
+            <span className="sub">{bannerCity || '精选酒店'}</span>
           </div>
-          <div className="featured-name">{bannerHotels[0].name}</div>
-          <div className="meta-row">
-            <EnvironmentOutline />
-            <span>{bannerHotels[0].city} · {bannerHotels[0].address}</span>
-          </div>
-          <div className="featured-footer">
-            <div className="price-block">
-              <span className="currency">¥</span>
-              <span className="value">{bannerHotels[0].price}</span>
-              <span className="unit">起/晚</span>
-            </div>
-            <Tag className="featured-tag">{bannerHotels[0].rating || '4.5'}分口碑</Tag>
-          </div>
+          <Swiper
+            autoplay
+            loop
+            className="featured-swiper"
+            indicator={(total, current) => {
+              const idx = current % bannerHotels.length;
+              return (
+                <div className="featured-indicator">
+                  {bannerHotels.map((_, i) => (
+                    <span key={i} className={`featured-dot ${i === idx ? 'active' : ''}`} />
+                  ))}
+                </div>
+              );
+            }}
+          >
+            {bannerHotels.map((hotel) => (
+              <Swiper.Item key={hotel.id}>
+                <div
+                  className="featured-slide"
+                  onClick={() => handleBannerClick(hotel)}
+                  style={{
+                    backgroundImage: hotel.images && hotel.images.length > 0
+                      ? `url(${hotel.images[0]})`
+                      : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                  }}
+                >
+                  <div className="featured-overlay">
+                    <div className="featured-name">{hotel.name}</div>
+                    <div className="meta-row">
+                      <EnvironmentOutline />
+                      <span>{hotel.city} · {hotel.address}</span>
+                    </div>
+                    <div className="featured-footer">
+                      <div className="price-block">
+                        <span className="currency">¥</span>
+                        <span className="value">{hotel.price}</span>
+                        <span className="unit">起/晚</span>
+                      </div>
+                      <Tag className="featured-tag">{hotel.rating || '4.5'}分口碑</Tag>
+                    </div>
+                  </div>
+                </div>
+              </Swiper.Item>
+            ))}
+          </Swiper>
         </div>
       )}
 
