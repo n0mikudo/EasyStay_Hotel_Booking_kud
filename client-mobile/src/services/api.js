@@ -10,6 +10,15 @@
 
 import axios from 'axios';
 
+const isDev = process.env.NODE_ENV !== 'production';
+
+const getErrorMessage = (error) => {
+  if (error?.response?.data?.message) return error.response.data.message;
+  if (error?.response?.status) return `HTTP ${error.response.status}`;
+  if (error?.request) return '网络错误: 无法连接到服务器';
+  return error?.message || '未知错误';
+};
+
 /**
  * 获取API基础URL
  * 优先使用环境变量，否则使用默认值
@@ -20,17 +29,8 @@ const getApiBaseUrl = () => {
     return process.env.REACT_APP_API_URL;
   }
 
-  // 检查当前运行环境
-  const hostname = window.location.hostname;
-
-  // 如果是本地开发环境
-  if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    return 'http://localhost:3000/api';
-  }
-
-  // 如果是局域网IP访问（真机测试）
-  // 假设后端运行在相同主机的3000端口
-  return `http://${hostname}:3000/api`;
+  // 默认同源走 /api，兼容域名与IP访问，避免直连 :3000 被安全组/运营商策略拦截
+  return '/api';
 };
 
 // API基础URL
@@ -52,7 +52,9 @@ const api = axios.create({
  */
 api.interceptors.request.use(
   (config) => {
-    console.log('API请求:', config.method.toUpperCase(), config.url);
+    if (isDev) {
+      console.log('API请求:', config.method?.toUpperCase(), config.url);
+    }
     return config;
   },
   (error) => {
@@ -69,13 +71,7 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    if (error.response) {
-      console.error('API错误:', error.response.status, error.response.data);
-    } else if (error.request) {
-      console.error('网络错误: 无法连接到服务器');
-    } else {
-      console.error('请求错误:', error.message);
-    }
+    console.error('API错误:', getErrorMessage(error));
     return Promise.reject(error);
   }
 );
@@ -144,9 +140,7 @@ export const bookingService = {
 export const chatService = {
   getApiBaseUrl: () => {
     if (process.env.REACT_APP_API_URL) return process.env.REACT_APP_API_URL;
-    const hostname = window.location.hostname;
-    if (hostname === 'localhost' || hostname === '127.0.0.1') return 'http://localhost:3000/api';
-    return `http://${hostname}:3000/api`;
+    return '/api';
   }
 };
 

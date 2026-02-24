@@ -150,7 +150,7 @@ function AdminLayout({ onLogout, user }) {
     <Layout className="app-layout">
       <Sidebar />
       <Layout className="main-layout">
-        <div className="layout-header-bar" style={{ padding: '12px 24px', background: '#fff', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+        <div className="layout-header-bar">
           <NotificationDropdown user={user || JSON.parse(localStorage.getItem('user') || '{}')} />
         </div>
         <Content className="main-content">
@@ -179,7 +179,7 @@ function MerchantLayout({ onLogout, user }) {
     <Layout className="app-layout">
       <Sidebar />
       <Layout className="main-layout">
-        <div className="layout-header-bar" style={{ padding: '12px 24px', background: '#fff', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+        <div className="layout-header-bar">
           <NotificationDropdown user={user || JSON.parse(localStorage.getItem('user') || '{}')} />
         </div>
         <Content className="main-content">

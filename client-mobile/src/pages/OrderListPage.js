@@ -5,7 +5,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { NavBar, Tabs, Card, Empty, Toast, Tag, Button } from 'antd-mobile';
-import { RightOutline, CalendarOutline, EnvironmentOutline, LockOutline } from 'antd-mobile-icons';
+import { CalendarOutline, EnvironmentOutline, LockOutline } from 'antd-mobile-icons';
 import { bookingService } from '../services/api';
 import { useClientAuth } from '../contexts/ClientAuthContext';
 import LoginSheet from '../components/LoginSheet';
@@ -92,11 +92,18 @@ function OrderListPage() {
             </Button>
           </div>
         ) : filteredOrders.length === 0 ? (
-          <Empty
-            className="order-empty"
-            description={loading ? '加载中...' : '暂无订单'}
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-          />
+          <div className="order-empty-wrap">
+            <Empty
+              className="order-empty"
+              description={loading ? '加载中...' : '暂无订单'}
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+            />
+            {!loading && (
+              <Button color="primary" fill="outline" onClick={() => navigate('/hotels')}>
+                去挑选酒店
+              </Button>
+            )}
+          </div>
         ) : (
           <div className="order-list">
             {filteredOrders.map((order) => (

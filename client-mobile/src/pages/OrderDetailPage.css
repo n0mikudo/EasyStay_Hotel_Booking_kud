@@ -127,3 +127,23 @@
   color: var(--color-price);
   font-size: var(--font-size-2xl);
 }
+
+.next-step-card {
+  border: 1px solid var(--color-border-light);
+}
+
+.next-step-copy {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-relaxed);
+}
+
+.next-step-actions {
+  margin-top: var(--spacing-md);
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.next-step-actions .adm-button {
+  flex: 1;
+}

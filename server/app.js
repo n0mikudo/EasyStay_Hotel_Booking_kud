@@ -19,10 +19,12 @@ const express = require('express');
 const cors = require('cors');
 const compression = require('compression');
 const bodyParser = require('body-parser');
+const swaggerUi = require('swagger-ui-express');
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
 const http = require('http');
+const openapi = require('./openapi');
 
 const app = express();
 const PORT = 3000;
@@ -31,6 +33,15 @@ const PORT = 3000;
 app.use(compression());
 app.use(cors());
 app.use(bodyParser.json());
+
+// API 文档（Swagger UI）
+app.get('/api-docs.json', (req, res) => {
+  res.json(openapi);
+});
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openapi, {
+  customSiteTitle: '易宿酒店预订平台 API 文档',
+  swaggerOptions: { docExpansion: 'none', defaultModelsExpandDepth: 1 },
+}));
 
 // 数据文件路径
 const DATA_FILE = path.join(__dirname, 'data', 'hotels.json');

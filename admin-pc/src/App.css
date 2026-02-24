@@ -73,6 +73,16 @@ body {
   line-height: 1.5;
 }
 
+.layout-header-bar {
+  padding: 12px 24px;
+  background: #fff;
+  border-bottom: 1px solid #eef0f4;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  box-shadow: 0 1px 8px rgba(15, 23, 42, 0.04);
+}
+
 /* 应用布局 */
 .app-layout {
   min-height: 100vh;
@@ -132,6 +142,18 @@ body {
   margin-bottom: var(--spacing-lg);
   transition: all var(--transition-normal);
   border: 1px solid var(--color-border);
+}
+
+.ant-card,
+.ant-table-wrapper,
+.ant-input,
+.ant-select-selector,
+.ant-picker {
+  border-radius: 10px !important;
+}
+
+.ant-btn {
+  font-weight: 500;
 }
 
 .content-card:hover {

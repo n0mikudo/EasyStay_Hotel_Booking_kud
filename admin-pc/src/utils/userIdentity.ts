@@ -1,4 +1,11 @@
-export function getStoredUser() {
+type UserLike = {
+  id?: string | number;
+  userId?: string | number;
+  merchantId?: string | number;
+  role?: string;
+} | null;
+
+export function getStoredUser(): UserLike {
   try {
     return JSON.parse(localStorage.getItem('user') || 'null');
   } catch {
@@ -11,7 +18,7 @@ export function getStoredUser() {
  * - id（当前主字段）
  * - userId / merchantId（兜底字段）
  */
-export function resolveUserIdentity(inputUser) {
+export function resolveUserIdentity(inputUser?: UserLike) {
   const user = inputUser && typeof inputUser === 'object' ? inputUser : getStoredUser();
   const role = user?.role || '';
   const userId = user?.id || user?.userId || user?.merchantId || '';

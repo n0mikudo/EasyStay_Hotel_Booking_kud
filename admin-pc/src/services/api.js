@@ -10,8 +10,16 @@
 
 import axios from 'axios';
 
-// API基础URL：开发环境直连后端 3000 端口，生产环境可配置 REACT_APP_API_URL
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000/api';
+const getApiBaseUrl = () => {
+  if (process.env.REACT_APP_API_URL) {
+    return process.env.REACT_APP_API_URL;
+  }
+
+  // 默认使用同源 /api，统一走 Nginx 反向代理，避免 IP:3000 直连在公网/手机端被拦截
+  return '/api';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 /**
  * 创建axios实例

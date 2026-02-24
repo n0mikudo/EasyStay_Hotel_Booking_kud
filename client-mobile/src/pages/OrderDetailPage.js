@@ -15,7 +15,6 @@ import {
 } from 'antd-mobile';
 import {
   CalendarOutline,
-  EnvironmentOutline,
   TeamOutline,
   CheckCircleOutline,
   RightOutline
@@ -188,6 +187,20 @@ function OrderDetailPage() {
             </Button>
           </div>
         )}
+
+        <Card className="order-section-card next-step-card" title="下一步建议">
+          <div className="next-step-copy">
+            {order.status === 'pending'
+              ? '建议提前一天确认行程与到店时间，避免高峰时段等待。'
+              : order.status === 'cancelled'
+                ? '可以返回酒店列表重新挑选更合适的房型与日期。'
+                : '本次行程已结束，欢迎继续探索下一站目的地。'}
+          </div>
+          <div className="next-step-actions">
+            <Button fill="outline" onClick={() => navigate('/orders')}>返回订单列表</Button>
+            <Button color="primary" onClick={() => navigate('/hotels')}>继续逛酒店</Button>
+          </div>
+        </Card>
       </div>
     </div>
   );

@@ -30,6 +30,13 @@
   padding: 80px 20px;
 }
 
+.order-empty-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  align-items: center;
+}
+
 .order-list {
   display: flex;
   flex-direction: column;

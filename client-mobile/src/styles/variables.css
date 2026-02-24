@@ -20,6 +20,9 @@
   --color-accent: #E8A317;
   --color-accent-light: #FBBF24;
   --color-accent-dark: #B77D10;
+  --color-seal: #B4232C;
+  --color-seal-light: #FDEBEC;
+  --color-ink: #1F2937;
 
   /* 功能色 */
   --color-price: #E53935;
@@ -39,6 +42,8 @@
   --color-bg-muted: #F1F5F9;
   --color-bg-warm: #FFFBF5;
   --color-bg-hover: #EEF2FF;
+  --color-bg-paper: #FFFDF8;
+  --color-bg-section: #FFFFFF;
 
   /* 玻璃拟态 */
   --glass-bg: rgba(255, 255, 255, 0.85);
@@ -48,6 +53,7 @@
   /* 边框 */
   --color-border: #E5E7EB;
   --color-border-light: #F3F4F6;
+  --color-border-elegant: rgba(180, 35, 44, 0.14);
 
   /* 语义色 */
   --color-success: #059669;
@@ -100,6 +106,7 @@
   --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
   --shadow-card-hover: 0 4px 16px rgba(0, 0, 0, 0.08);
   --shadow-glow: 0 0 32px rgba(67, 56, 202, 0.18);
+  --shadow-elegant: 0 10px 30px rgba(15, 23, 42, 0.08);
 
   /* 动效 */
   --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
@@ -109,6 +116,10 @@
   /* 安全区域 */
   --safe-area-top: env(safe-area-inset-top, 0px);
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+
+  /* 纹理层 */
+  --texture-grid: radial-gradient(circle at 1px 1px, rgba(67, 56, 202, 0.06) 1px, transparent 0);
+  --texture-grid-size: 16px 16px;
 }
 
 /* 深色模式 */

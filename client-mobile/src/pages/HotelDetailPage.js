@@ -34,7 +34,6 @@ import {
   HeartFill,
   CheckCircleFill,
   CloseCircleOutline,
-  CalendarOutline,
   TeamOutline,
   PhonebookOutline
 } from 'antd-mobile-icons';
@@ -609,6 +608,11 @@ function HotelDetailPage() {
           <div className="total-price">
             共{getNightsCount()}晚{selectedRoomType ? `，${roomCount}间，总计¥${getTotalPrice()}` : '，请选择房型'}
           </div>
+          <div className="booking-promises">
+            <span className="promise-item">可退改</span>
+            <span className="promise-item">到店付可选</span>
+            <span className="promise-item">人工客服</span>
+          </div>
         </div>
         <Button
           color="primary"
@@ -683,6 +687,9 @@ function HotelDetailPage() {
                 <span>总计</span>
                 <span className="total-amount">¥{getTotalPrice()}</span>
               </div>
+            </div>
+            <div className="booking-note">
+              预订后可在“我的订单”中查看详情与状态，行程有变可在入住前申请取消。
             </div>
           </div>
 

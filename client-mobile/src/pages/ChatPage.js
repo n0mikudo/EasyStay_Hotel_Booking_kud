@@ -157,9 +157,7 @@ function ChatPage() {
 
   const getApiBaseUrl = () => {
     if (process.env.REACT_APP_API_URL) return process.env.REACT_APP_API_URL;
-    const hostname = window.location.hostname;
-    if (hostname === 'localhost' || hostname === '127.0.0.1') return 'http://localhost:3000/api';
-    return `http://${hostname}:3000/api`;
+    return '/api';
   };
 
   const clearWaitTimers = () => {

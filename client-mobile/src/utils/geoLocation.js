@@ -6,8 +6,8 @@
 import { flatCities } from './cityData';
 
 const getApiBase = () => {
-  const h = window.location.hostname;
-  return (h === 'localhost' || h === '127.0.0.1') ? 'http://localhost:3000/api' : `http://${h}:3000/api`;
+  if (process.env.REACT_APP_API_URL) return process.env.REACT_APP_API_URL;
+  return '/api';
 };
 
 function toCityFormat(name) {

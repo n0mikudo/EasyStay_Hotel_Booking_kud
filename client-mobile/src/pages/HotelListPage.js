@@ -313,10 +313,6 @@ function HotelListPage() {
 
     setSearchParams(params);
     setFilterVisible(false);
-
-    loadHotels(true, {
-      filters: { keyword, city, star, price }
-    });
   };
 
   const handleResetAll = () => {
@@ -352,6 +348,8 @@ function HotelListPage() {
   const renderHotelCard = (hotel) => {
     const amenities = hotel.amenities || [];
     const displayAmenities = amenities.slice(0, 3);
+    const styleTag = hotel.rating >= 5 ? '豪华地标' : hotel.rating >= 4 ? '商旅优选' : '轻居舒适';
+    const locationText = hotel.address || `${hotel.city}核心区`;
 
     return (
       <Card
@@ -382,7 +380,10 @@ function HotelListPage() {
           {/* 右侧信息 */}
           <div className="hotel-info">
             <div className="hotel-header">
-              <h3 className="hotel-name">{hotel.name}</h3>
+              <div className="hotel-title-wrap">
+                <span className="hotel-style-tag">{styleTag}</span>
+                <h3 className="hotel-name">{hotel.name}</h3>
+              </div>
               <div className="hotel-rating">
                 <StarFill className="rating-star" />
                 <span className="rating-score">{hotel.rating || '4.5'}</span>
@@ -391,7 +392,7 @@ function HotelListPage() {
 
             <div className="hotel-location">
               <EnvironmentOutline className="location-icon" />
-              <span className="location-text">{hotel.city} · {hotel.address}</span>
+              <span className="location-text">{hotel.city} · {locationText}</span>
             </div>
 
             {/* 设施标签 */}
@@ -658,7 +659,6 @@ function HotelListPage() {
             return p;
           });
           setCityPickerVisible(false);
-          loadHotels(true);
         }}
       />
     </div>

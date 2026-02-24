@@ -572,6 +572,21 @@
   margin-top: 2px;
 }
 
+.booking-promises {
+  margin-top: 4px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.promise-item {
+  font-size: var(--font-size-xs);
+  color: var(--color-primary-dark);
+  background: var(--color-primary-bg);
+  border-radius: var(--radius-full);
+  padding: 1px 8px;
+}
+
 .book-btn {
   min-width: 120px;
   font-weight: var(--font-weight-semibold);
@@ -651,6 +666,13 @@
   background: var(--color-bg-warm);
   border-radius: var(--radius-lg);
   padding: var(--spacing-lg);
+}
+
+.booking-note {
+  margin-top: var(--spacing-md);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+  line-height: var(--line-height-normal);
 }
 
 .breakdown-item {

@@ -216,6 +216,22 @@
   margin-bottom: 6px;
 }
 
+.hotel-title-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.hotel-style-tag {
+  display: inline-block;
+  margin-bottom: 4px;
+  padding: 1px 8px;
+  font-size: var(--font-size-xs);
+  color: var(--color-seal);
+  border: 1px solid var(--color-border-elegant);
+  border-radius: var(--radius-full);
+  background: var(--color-seal-light);
+}
+
 .hotel-name {
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-semibold);
@@ -282,6 +298,9 @@
 .amenity-tag {
   font-size: var(--font-size-xs);
   padding: 2px 6px;
+  --text-color: #4b5563;
+  --border-color: #d9dee8;
+  --background-color: #f8fafc;
 }
 
 /* 价格 */

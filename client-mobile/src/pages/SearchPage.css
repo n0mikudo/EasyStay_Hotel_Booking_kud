@@ -33,6 +33,59 @@
   position: relative;
 }
 
+.journey-hero,
+.featured-hotel {
+  margin: var(--spacing-lg) var(--spacing-lg) 0;
+  padding: var(--spacing-lg);
+}
+
+.journey-copy {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-ink);
+  line-height: var(--line-height-relaxed);
+}
+
+.journey-meta {
+  margin-top: var(--spacing-md);
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-sm);
+}
+
+.journey-meta .dot {
+  margin: 0 var(--spacing-xs);
+}
+
+.featured-hotel {
+  cursor: pointer;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.featured-hotel:active {
+  transform: scale(0.99);
+  box-shadow: var(--shadow-card-hover);
+}
+
+.featured-name {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  margin-bottom: var(--spacing-sm);
+}
+
+.featured-footer {
+  margin-top: var(--spacing-md);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.featured-tag {
+  --text-color: var(--color-primary);
+  --background-color: var(--color-primary-bg);
+  --border-color: var(--color-primary-light);
+}
+
 .banner-swiper {
   height: 100%;
 }
@@ -221,7 +274,7 @@
 
 /* ==================== 搜索表单卡片 ==================== */
 .search-form-container {
-  margin: -28px var(--spacing-lg) 0;
+  margin: var(--spacing-lg) var(--spacing-lg) 0;
   background: var(--color-bg-card);
   border-radius: var(--radius-xl);
   padding: var(--spacing-xl) var(--spacing-lg);
@@ -589,7 +642,7 @@
 /* ==================== 响应式 ==================== */
 @media (max-width: 375px) {
   .search-form-container {
-    margin: -24px var(--spacing-md) 0;
+    margin: var(--spacing-md) var(--spacing-md) 0;
     padding: var(--spacing-lg) var(--spacing-md);
   }
 

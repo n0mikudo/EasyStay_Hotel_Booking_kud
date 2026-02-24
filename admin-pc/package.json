@@ -37,6 +37,8 @@
     ]
   },
   "devDependencies": {
+    "@types/node": "^24.5.2",
+    "typescript": "^4.9.5",
     "react-scripts": "5.0.1"
   },
   "proxy": "http://localhost:3000"
