@@ -21,12 +21,12 @@ import {
   ArrowRightOutlined,
   AuditOutlined,
   BarChartOutlined,
-  UserOutlined,
   SettingOutlined,
-  CalendarOutlined
+  CalendarOutlined,
+  ExclamationCircleOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import { statsService, hotelService, activityService } from '../services/api';
+import { statsService, hotelService } from '../services/api';
 import './Dashboard.css';
 
 function AdminDashboard({ user }) {
@@ -39,7 +39,7 @@ function AdminDashboard({ user }) {
   });
   const [pendingHotels, setPendingHotels] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [recentActivities, setRecentActivities] = useState([]);
+  const [riskAlerts, setRiskAlerts] = useState([]);
   const [todayStats, setTodayStats] = useState({
     newHotels: 0,
     audits: 0
@@ -68,32 +68,10 @@ function AdminDashboard({ user }) {
         setPendingHotels(hotelsRes.data.data);
       }
 
-      // 获取最近活动数据
-      const activitiesRes = await activityService.getActivities();
-      if (activitiesRes.data.success) {
-        // 处理活动数据，计算相对时间
-        const processedActivities = activitiesRes.data.data.map(activity => {
-          const now = new Date();
-          const activityTime = new Date(activity.time);
-          const diffInMinutes = Math.floor((now - activityTime) / (1000 * 60));
-          
-          let timeText = '';
-          if (diffInMinutes < 1) {
-            timeText = '刚刚';
-          } else if (diffInMinutes < 60) {
-            timeText = `${diffInMinutes}分钟前`;
-          } else if (diffInMinutes < 1440) {
-            timeText = `${Math.floor(diffInMinutes / 60)}小时前`;
-          } else {
-            timeText = `${Math.floor(diffInMinutes / 1440)}天前`;
-          }
-          
-          return {
-            ...activity,
-            time: timeText
-          };
-        });
-        setRecentActivities(processedActivities);
+      // 获取经营风险预警
+      const riskRes = await statsService.getRiskAlerts();
+      if (riskRes.data.success) {
+        setRiskAlerts(riskRes.data.data?.alerts || []);
       }
 
       // 今日数据已由 stats 接口返回
@@ -111,16 +89,13 @@ function AdminDashboard({ user }) {
       isFirstLoad.current = false;
     }
   };
-
-
-
-  const getActivityIcon = (type) => {
-    const iconMap = {
-      audit: <AuditOutlined style={{ color: '#1890ff' }} />,
-      entry: <HomeOutlined style={{ color: '#52c41a' }} />,
-      system: <SettingOutlined style={{ color: '#fa8c16' }} />
+  const getRiskLevelTag = (level) => {
+    const tagMap = {
+      danger: <Tag color="error">高风险</Tag>,
+      warning: <Tag color="warning">关注</Tag>,
+      info: <Tag color="blue">正常</Tag>
     };
-    return iconMap[type] || <UserOutlined />;
+    return tagMap[level] || <Tag>未知</Tag>;
   };
 
   // 计算审核通过率
@@ -360,7 +335,7 @@ function AdminDashboard({ user }) {
         </Col>
       </Row>
 
-      {/* 待审核酒店和最近活动 */}
+      {/* 待审核酒店和经营风险预警 */}
       <Row gutter={[24, 24]}>
         {/* 待审核酒店 */}
         <Col xs={24} lg={12}>
@@ -420,7 +395,7 @@ function AdminDashboard({ user }) {
                     description={
                       <div style={{ fontSize: '12px', color: '#8c8c8c', marginTop: '4px' }}>
                         <div>{item.city} · {item.address}</div>
-                        <div>价格：¥{item.price}起/晚 · 星级：{'★'.repeat(item.rating)}</div>
+                        <div>价格：¥{item.price}起/晚</div>
                         <div style={{ marginTop: '4px' }}>提交时间：{new Date(item.createdAt).toLocaleString()}</div>
                       </div>
                     }
@@ -431,13 +406,12 @@ function AdminDashboard({ user }) {
           </Card>
         </Col>
 
-        {/* 最近活动 */}
+        {/* 经营风险预警 */}
         <Col xs={24} lg={12}>
           <Card
             title={
               <div className="flex-between" style={{ alignItems: 'center' }}>
-                <span>最近活动</span>
-                <Tag color="blue">实时</Tag>
+                <span>经营风险预警</span>
               </div>
             }
             className="content-card fade-in"
@@ -445,8 +419,8 @@ function AdminDashboard({ user }) {
           >
             <List
               loading={loading}
-              dataSource={recentActivities}
-              locale={{ emptyText: '暂无活动记录' }}
+              dataSource={riskAlerts}
+              locale={{ emptyText: '暂无风险预警' }}
               renderItem={item => (
                 <List.Item
                   className="fade-in"
@@ -463,15 +437,25 @@ function AdminDashboard({ user }) {
                   }}
                 >
                   <List.Item.Meta
-                    avatar={<Avatar icon={getActivityIcon(item.type)} />}
+                    avatar={<Avatar icon={<ExclamationCircleOutlined />} />}
                     title={
-                      <div style={{ fontSize: '14px', color: '#262626' }}>
-                        <span style={{ fontWeight: '500' }}>{item.user}</span> {item.action}
+                      <div className="flex-between" style={{ fontSize: '14px', color: '#262626' }}>
+                        <span style={{ fontWeight: '500' }}>{item.title}</span>
+                        {getRiskLevelTag(item.level)}
                       </div>
                     }
                     description={
                       <div style={{ fontSize: '12px', color: '#8c8c8c', marginTop: '2px' }}>
-                        {item.time}
+                        <div>{item.description}</div>
+                        <div style={{ marginTop: 4 }}>风险数量：{item.count}</div>
+                        <Button
+                          type="link"
+                          size="small"
+                          style={{ paddingLeft: 0, marginTop: 2 }}
+                          onClick={() => item.actionRoute && navigate(item.actionRoute)}
+                        >
+                          去处理
+                        </Button>
                       </div>
                     }
                   />

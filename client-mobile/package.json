@@ -3,11 +3,13 @@
   "version": "1.0.0",
   "private": true,
   "dependencies": {
+    "antd-mobile": "^5.32.0",
+    "axios": "^1.5.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-markdown": "^10.1.0",
     "react-router-dom": "^6.16.0",
-    "antd-mobile": "^5.32.0",
-    "axios": "^1.5.0"
+    "remark-gfm": "^4.0.1"
   },
   "scripts": {
     "start": "set PORT=3001 && react-scripts start",

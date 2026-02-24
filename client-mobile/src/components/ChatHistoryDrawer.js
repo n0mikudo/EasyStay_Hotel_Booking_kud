@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { Popup, SwipeAction, Dialog } from 'antd-mobile';
+import React, { useMemo, useState } from 'react';
+import { Popup, SwipeAction, Dialog, Input, Button, Toast } from 'antd-mobile';
 import { AddOutline } from 'antd-mobile-icons';
 import { useClientAuth } from '../contexts/ClientAuthContext';
 import './ChatHistoryDrawer.css';
@@ -39,8 +39,11 @@ function groupByDate(sessions) {
   return groups;
 }
 
-function ChatHistoryDrawer({ visible, onClose, sessions, activeSessionId, onSelectSession, onNewChat, onDeleteSession }) {
+function ChatHistoryDrawer({ visible, onClose, sessions, activeSessionId, onSelectSession, onNewChat, onDeleteSession, onRenameSession }) {
   const { user } = useClientAuth();
+  const [renameVisible, setRenameVisible] = useState(false);
+  const [renameValue, setRenameValue] = useState('');
+  const [renameTargetId, setRenameTargetId] = useState(null);
 
   const groups = useMemo(() => groupByDate(sessions || []), [sessions]);
 
@@ -55,17 +58,47 @@ function ChatHistoryDrawer({ visible, onClose, sessions, activeSessionId, onSele
     }
   };
 
+  const handleRename = (session) => {
+    setRenameTargetId(session.id);
+    setRenameValue(session.title || '');
+    setRenameVisible(true);
+  };
+
+  const submitRename = async () => {
+    const nextTitle = renameValue.trim();
+    if (!nextTitle) {
+      Toast.show({ content: '请输入会话名称', position: 'top' });
+      return;
+    }
+    try {
+      await onRenameSession?.(renameTargetId, nextTitle);
+      setRenameVisible(false);
+      setRenameTargetId(null);
+      setRenameValue('');
+    } catch (e) {
+      Toast.show({ content: '重命名失败', position: 'top' });
+    }
+  };
+
   const renderSessionItem = (session) => {
     const isActive = session.id === activeSessionId;
     return (
       <SwipeAction
         key={session.id}
-        rightActions={[{
-          key: 'delete',
-          text: '删除',
-          color: 'danger',
-          onClick: () => handleDelete(session.id),
-        }]}
+        rightActions={[
+          {
+            key: 'rename',
+            text: '重命名',
+            color: 'primary',
+            onClick: () => handleRename(session),
+          },
+          {
+            key: 'delete',
+            text: '删除',
+            color: 'danger',
+            onClick: () => handleDelete(session.id),
+          },
+        ]}
       >
         <div
           className={`drawer-session-item ${isActive ? 'active' : ''}`}
@@ -96,14 +129,15 @@ function ChatHistoryDrawer({ visible, onClose, sessions, activeSessionId, onSele
     : '';
 
   return (
-    <Popup
-      visible={visible}
-      onMaskClick={onClose}
-      position="left"
-      bodyClassName="chat-drawer-body"
-      destroyOnClose={false}
-    >
-      <div className="chat-drawer">
+    <>
+      <Popup
+        visible={visible}
+        onMaskClick={onClose}
+        position="left"
+        bodyClassName="chat-drawer-body"
+        destroyOnClose={false}
+      >
+        <div className="chat-drawer">
         <div className="drawer-header">
           <div className="drawer-user-info">
             <div className="drawer-avatar">
@@ -136,8 +170,42 @@ function ChatHistoryDrawer({ visible, onClose, sessions, activeSessionId, onSele
             </>
           )}
         </div>
-      </div>
-    </Popup>
+        </div>
+      </Popup>
+
+      <Popup
+        visible={renameVisible}
+        onMaskClick={() => setRenameVisible(false)}
+        position="bottom"
+        bodyStyle={{ borderTopLeftRadius: 12, borderTopRightRadius: 12, padding: 16 }}
+      >
+        <div>
+          <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>重命名对话</div>
+          <Input
+            placeholder="请输入新名称"
+            value={renameValue}
+            maxLength={50}
+            onChange={setRenameValue}
+            clearable
+          />
+          <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+            <Button
+              block
+              onClick={() => {
+                setRenameVisible(false);
+                setRenameTargetId(null);
+                setRenameValue('');
+              }}
+            >
+              取消
+            </Button>
+            <Button block color="primary" onClick={submitRename}>
+              确定
+            </Button>
+          </div>
+        </div>
+      </Popup>
+    </>
   );
 }
 

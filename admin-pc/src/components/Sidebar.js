@@ -113,12 +113,17 @@ function Sidebar() {
         {
           key: `${basePath}/entry`,
           icon: <PlusOutlined />,
-          label: '商户录入'
+          label: '酒店录入'
         },
         {
           key: `${basePath}/my-hotels`,
           icon: <HomeOutlined />,
           label: '酒店管理'
+        },
+        {
+          key: `${basePath}/messages`,
+          icon: <MessageOutlined />,
+          label: '消息中心'
         },
         {
           key: `${basePath}/bookings`,

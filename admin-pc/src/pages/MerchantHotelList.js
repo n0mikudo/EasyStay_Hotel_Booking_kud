@@ -2,7 +2,7 @@
  * 商户酒店列表页面
  *
  * 功能：
- * 1. 展示商户录入的所有酒店
+ * 1. 展示酒店录入后的所有酒店
  * 2. 查看酒店状态
  * 3. 编辑酒店信息
  *
@@ -35,6 +35,8 @@ import { cityData } from '../utils/cityData';
 import { useNavigate } from 'react-router-dom';
 import { hotelService } from '../services/api';
 import CascadingDatePicker from '../components/CascadingDatePicker';
+import { resolveUserIdentity } from '../utils/userIdentity';
+import { getHotelRatingLabel } from '../utils/hotelRating';
 import './HotelManagement.css';
 
 const { TextArea } = Input;
@@ -60,22 +62,23 @@ function MerchantHotelList({ user: userProp }) {
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editingHotel, setEditingHotel] = useState(null);
   const [form] = Form.useForm();
-  let user = null;
-  try {
-    user = userProp || JSON.parse(localStorage.getItem('user') || 'null');
-  } catch (e) {
-    console.error('解析用户信息失败:', e);
-  }
+  const { role: userRole, userId } = resolveUserIdentity(userProp);
+
+  useEffect(() => {
+    if (userRole === 'merchant' && !userId) {
+      message.warning('登录信息异常，请重新登录');
+    }
+  }, [userRole, userId]);
 
   const loadHotels = useCallback(async () => {
-    if (!user?.id) {
+    if (userRole === 'merchant' && !userId) {
       setHotels([]);
       setLoading(false);
       return;
     }
     try {
       setLoading(true);
-      const response = await hotelService.getHotels({ userId: user.id });
+      const response = await hotelService.getHotels({ userId, role: userRole });
       if (response.data.success) {
         setHotels(response.data.data || []);
       }
@@ -84,7 +87,7 @@ function MerchantHotelList({ user: userProp }) {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [userId, userRole]);
 
   useEffect(() => {
     loadHotels();
@@ -92,7 +95,7 @@ function MerchantHotelList({ user: userProp }) {
 
   const handleDelete = async (id) => {
     try {
-      const response = await hotelService.deleteHotel(id, user?.id);
+      const response = await hotelService.deleteHotel(id, { userId, role: userRole });
       if (response.data.success) {
         message.success('删除成功');
         loadHotels();
@@ -127,11 +130,11 @@ function MerchantHotelList({ user: userProp }) {
       const hotelData = {
         ...values,
         city: cityValue,
-        userId: user?.id,
+        userId,
         roomTypesStr,
         price: minPrice
       };
-      const response = await hotelService.updateHotel(editingHotel.id, hotelData, { userId: user?.id, role: 'merchant' });
+      const response = await hotelService.updateHotel(editingHotel.id, hotelData, { userId, role: 'merchant' });
       if (response.data.success) {
         message.success('更新成功，已通知管理员');
         setEditModalVisible(false);
@@ -147,7 +150,7 @@ function MerchantHotelList({ user: userProp }) {
     try {
       if (confirm) {
         // 确认管理员修改
-        const response = await hotelService.updateHotel(hotel.id, hotel, { userId: user?.id, role: 'merchant' });
+        const response = await hotelService.updateHotel(hotel.id, hotel, { userId, role: 'merchant' });
         if (response.data.success) {
           message.success('已确认管理员的修改');
           loadHotels();
@@ -155,7 +158,7 @@ function MerchantHotelList({ user: userProp }) {
       } else {
         // 拒绝管理员修改，恢复原状态
         const { adminEditData, ...originalHotel } = hotel;
-        const response = await hotelService.updateHotel(hotel.id, originalHotel, { userId: user?.id, role: 'merchant' });
+        const response = await hotelService.updateHotel(hotel.id, originalHotel, { userId, role: 'merchant' });
         if (response.data.success) {
           message.success('已拒绝管理员的修改');
           loadHotels();
@@ -214,7 +217,7 @@ function MerchantHotelList({ user: userProp }) {
       title: '星级',
       dataIndex: 'rating',
       key: 'rating',
-      render: (rating) => '★'.repeat(rating)
+      render: (rating) => getHotelRatingLabel(rating)
     },
     {
       title: '状态',
@@ -278,7 +281,7 @@ function MerchantHotelList({ user: userProp }) {
             className="btn-primary"
             onClick={() => navigate('/merchant/entry')}
           >
-            录入新酒店
+            酒店录入
           </Button>
         </div>
 

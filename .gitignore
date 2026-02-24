@@ -2,74 +2,77 @@
 node_modules/
 */node_modules/
 
-# Production builds
+# Build artifacts
 build/
 dist/
+.cache/
+.parcel-cache/
+.next/
+.nuxt/
+coverage/
 
-# Environment variables (keep .env.production for deployment)
+# Environment variables (never commit real env files)
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-server/.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!.env.sample
+!**/.env.example
+!**/.env.sample
 
-# IDE
+# IDE and editor temp
 .vscode/
 .idea/
 *.swp
 *.swo
 
-# OS files
+# OS junk
 .DS_Store
 Thumbs.db
 
-# Logs
+# Logs and runtime files
+*.log
 logs/
+logs/**
+server/logs/
+server/logs/**
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
-server/logs/
-
-# Runtime data
 pids
 *.pid
-*.seed
 *.pid.lock
+*.seed
 
-# Coverage directory used by tools like istanbul
-coverage/
-
-# Temporary folders
+# Temporary files
 tmp/
 temp/
 *.tmp
 
-# Database files (local JSON data should not be committed)
+# Local database/cache data
 server/data/*.json
 server/data/backups/
-
-# Misc
-.cache/
-.parcel-cache/
-.next/
-.nuxt/
-
-# Documents & images
-*.pdf
-*.docx
-*.png
-
-# Markdown docs (keep README and project manual only)
-*.md
-!README.md
-!项目手册.md
 
 # Knowledge base output
 kb_output/
 
-# Non-essential scripts
+# Unnecessary heavy docs/assets
+*.pdf
+*.docx
+*.png
+
+# Markdown policy: ignore by default, keep core docs only
+*.md
+!README.md
+!项目手册.md
+!部署指南.md
+!Coze_Agent_搭建指南.md
+!Coze_对话召回与边界增强_执行指导.md
+!验证测试指导手册.md
+
+# Non-essential local scripts
 quick-verify.sh
 rebuild-admin.sh
 upload-to-server.bat
@@ -78,5 +81,5 @@ server/test-*.js
 # Data update docs
 酒店数据更新/
 
-# Root package-lock (not a real root project)
+# Root lockfile is not used as a package
 /package-lock.json

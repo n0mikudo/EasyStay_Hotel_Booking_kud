@@ -1,8 +1,8 @@
 /**
- * 商户酒店录入页面
+ * 酒店录入页面
  *
  * 功能：
- * 1. 录入新酒店信息
+ * 1. 酒店录入
  * 2. 表单验证
  * 3. 提交后等待审核
  *
@@ -27,6 +27,7 @@ import { SaveOutlined, PlusOutlined, MinusCircleOutlined } from '@ant-design/ico
 import { hotelService } from '../services/api';
 import { cityData } from '../utils/cityData';
 import CascadingDatePicker from '../components/CascadingDatePicker';
+import { resolveUserIdentity } from '../utils/userIdentity';
 import './MerchantEntry.css';
 
 const { TextArea } = Input;
@@ -47,17 +48,13 @@ function roomTypesToStr(roomTypes) {
 function MerchantHotelEntry() {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
-  const [user, setUser] = useState(null);
-
-  React.useEffect(() => {
-    // 获取用户信息
-    const userInfo = localStorage.getItem('user');
-    if (userInfo) {
-      setUser(JSON.parse(userInfo));
-    }
-  }, []);
+  const { userId, role } = resolveUserIdentity();
 
   const handleSubmit = async (values) => {
+    if (role === 'merchant' && !userId) {
+      message.warning('登录信息异常，请重新登录');
+      return;
+    }
     const roomTypes = (values.roomTypes || []).filter(rt => rt && (rt.name || '').trim() && (rt.price || 0) > 0);
     if (roomTypes.length === 0) {
       message.error('请至少添加一个有效房型（房型名称和价格均需填写）');
@@ -71,7 +68,7 @@ function MerchantHotelEntry() {
       const hotelData = {
         ...values,
         city: cityValue,
-        userId: user?.id,
+        userId,
         roomTypesStr,
         price: minPrice
       };
@@ -93,7 +90,7 @@ function MerchantHotelEntry() {
   return (
     <div className="merchant-entry">
       <div className="page-header fade-in">
-        <h1 className="page-title">录入新酒店</h1>
+        <h1 className="page-title">酒店录入</h1>
         <p className="page-subtitle">填写酒店信息，提交后等待审核</p>
       </div>
 

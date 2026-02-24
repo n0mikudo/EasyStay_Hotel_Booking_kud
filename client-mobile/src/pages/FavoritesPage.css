@@ -14,6 +14,26 @@
   font-weight: 600;
 }
 
+.fav-back-entry {
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.fav-back-entry:active {
+  transform: scale(0.95);
+}
+
 .fav-content {
   padding: var(--spacing-lg);
 }

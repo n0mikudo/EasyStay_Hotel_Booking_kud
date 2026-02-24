@@ -20,7 +20,9 @@ import {
   BarChartOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import { message } from 'antd';
 import { hotelService } from '../services/api';
+import { resolveUserIdentity } from '../utils/userIdentity';
 import './Dashboard.css';
 
 function MerchantDashboard() {
@@ -33,40 +35,26 @@ function MerchantDashboard() {
   });
   const [recentHotels, setRecentHotels] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState(null);
+  const { userId, role } = resolveUserIdentity();
 
   useEffect(() => {
-    // 获取用户信息
-    const userInfo = localStorage.getItem('user');
-    if (userInfo) {
-      try {
-        setUser(JSON.parse(userInfo));
-      } catch (e) {
-        console.error('解析用户信息失败:', e);
-        setLoading(false);
-      }
-    } else {
+    if (role === 'merchant' && !userId) {
+      message.warning('登录信息异常，请重新登录');
       setLoading(false);
+      return;
     }
-  }, []);
-
-  useEffect(() => {
-    if (user) {
-      loadData();
-    } else if (user === null && localStorage.getItem('user') === null) {
-      setLoading(false);
-    }
+    loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [userId, role]);
 
   const loadData = async () => {
-    if (!user?.id) {
+    if (!userId) {
       setLoading(false);
       return;
     }
     try {
       setLoading(true);
-      const response = await hotelService.getHotels({ userId: user.id });
+      const response = await hotelService.getHotels({ userId, role });
       if (response.data.success) {
         const hotels = response.data.data || [];
         setRecentHotels(hotels.slice(0, 5));
@@ -114,7 +102,7 @@ function MerchantDashboard() {
           onClick={() => navigate('/merchant/entry')}
           className="btn-primary"
         >
-          录入新酒店
+          酒店录入
         </Button>
       </Card>
 
@@ -184,7 +172,7 @@ function MerchantDashboard() {
 
       {/* 最近录入的酒店 */}
       <Card
-        title="最近录入的酒店"
+        title="最近酒店录入"
         className="pending-list-card fade-in"
         style={{ animationDelay: '0.5s' }}
         extra={
@@ -224,12 +212,12 @@ function MerchantDashboard() {
       >
         <div className="guide-content">
           <div className="guide-item">
-            <h4>1. 录入新酒店</h4>
-            <p>点击"录入新酒店"按钮，填写酒店详细信息并提交审核</p>
+            <h4>1. 酒店录入</h4>
+            <p>点击“酒店录入”按钮，填写酒店详细信息并提交审核</p>
           </div>
           <div className="guide-item">
             <h4>2. 查看审核状态</h4>
-            <p>在"最近录入的酒店"列表中查看酒店的审核状态</p>
+            <p>在“最近酒店录入”列表中查看酒店的审核状态</p>
           </div>
           <div className="guide-item">
             <h4>3. 管理酒店信息</h4>

@@ -4,8 +4,8 @@
  */
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { NavBar, Card, Empty, Image, Tag, Button } from 'antd-mobile';
-import { StarFill, EnvironmentOutline } from 'antd-mobile-icons';
+import { NavBar, Card, Empty, Image, Button } from 'antd-mobile';
+import { EnvironmentOutline, LeftOutline } from 'antd-mobile-icons';
 import { hotelService } from '../services/api';
 import './FavoritesPage.css';
 
@@ -60,7 +60,20 @@ function FavoritesPage() {
 
   return (
     <div className="favorites-page">
-      <NavBar className="fav-nav" back={null}>
+      <NavBar
+        className="fav-nav"
+        back={null}
+        left={
+          <button
+            type="button"
+            className="fav-back-entry"
+            onClick={() => navigate('/profile')}
+            aria-label="返回我的"
+          >
+            <LeftOutline />
+          </button>
+        }
+      >
         <span className="nav-title">我的收藏</span>
       </NavBar>
 

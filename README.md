@@ -5,12 +5,12 @@
 ## 项目信息
 
 - **服务器 IP**: 81.71.15.150
-- **域名**: easystay4u.duckdns.org（已配置 HTTPS + Let's Encrypt 证书）
+- **域名**: easystay4u.site（已配置 HTTPS + Let's Encrypt 证书）
 - **项目目录**: /root/hotel/EasyStay_Hotel_Booking_kud
 - **访问地址**:
-  - 管理端: https://easystay4u.duckdns.org
-  - 移动端: https://easystay4u.duckdns.org/mobile/
-  - 后端 API: https://easystay4u.duckdns.org/api
+  - 管理端: https://easystay4u.site
+  - 移动端: https://easystay4u.site/mobile/
+  - 后端 API: https://easystay4u.site/api
   - IP 直连（备用）: http://81.71.15.150
 
 ## 项目结构
@@ -200,7 +200,7 @@ pm2 delete all
 ## HTTPS 与域名
 
 本项目已完成 HTTPS 升级：
-- **域名**：`easystay4u.duckdns.org`（DuckDNS 免费动态 DNS）
+- **域名**：`easystay4u.site`（阿里云注册）
 - **SSL 证书**：Let's Encrypt（自动续期，有效期 90 天）
 - **协议**：TLS 1.2/1.3 + HTTP/2 + HSTS
 - **HTTP 自动跳转**：域名访问 HTTP 自动 301 重定向到 HTTPS

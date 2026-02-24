@@ -127,12 +127,17 @@
   left: 0;
   right: 0;
   background: linear-gradient(to top, rgba(0, 0, 0, 0.75) 0%, rgba(0, 0, 0, 0.2) 60%, transparent 100%);
-  padding: var(--spacing-xl) var(--spacing-lg);
+  padding: var(--spacing-xl) var(--spacing-lg) calc(var(--spacing-xl) + 8px);
   color: #fff;
+  text-align: center;
 }
 
 .banner-content {
   position: relative;
+}
+
+.banner-price {
+  justify-content: center;
 }
 
 .banner-badge {

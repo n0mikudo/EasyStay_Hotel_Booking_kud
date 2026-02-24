@@ -5,8 +5,10 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { NavBar, Tabs, Card, Empty, Toast, Tag, Button } from 'antd-mobile';
-import { RightOutline, CalendarOutline, EnvironmentOutline } from 'antd-mobile-icons';
+import { RightOutline, CalendarOutline, EnvironmentOutline, LockOutline } from 'antd-mobile-icons';
 import { bookingService } from '../services/api';
+import { useClientAuth } from '../contexts/ClientAuthContext';
+import LoginSheet from '../components/LoginSheet';
 import './OrderListPage.css';
 
 const statusTabs = [
@@ -18,18 +20,24 @@ const statusTabs = [
 
 function OrderListPage() {
   const navigate = useNavigate();
+  const { user, isLoggedIn } = useClientAuth();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('all');
+  const [showLogin, setShowLogin] = useState(false);
 
   useEffect(() => {
-    loadOrders();
-  }, []);
+    if (isLoggedIn && user?.id) {
+      loadOrders();
+    } else {
+      setOrders([]);
+    }
+  }, [isLoggedIn, user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadOrders = async () => {
     try {
       setLoading(true);
-      const response = await bookingService.getBookings();
+      const response = await bookingService.getBookings({ clientUserId: user.id });
       if (response.data.success) {
         setOrders(response.data.data || []);
       }
@@ -75,7 +83,15 @@ function OrderListPage() {
       </Tabs>
 
       <div className="order-content">
-        {filteredOrders.length === 0 ? (
+        {!isLoggedIn ? (
+          <div className="order-login-prompt">
+            <LockOutline style={{ fontSize: 48, color: 'var(--color-text-disabled)' }} />
+            <p className="login-prompt-text">登录后查看您的订单</p>
+            <Button color="primary" shape="rounded" onClick={() => setShowLogin(true)}>
+              立即登录
+            </Button>
+          </div>
+        ) : filteredOrders.length === 0 ? (
           <Empty
             className="order-empty"
             description={loading ? '加载中...' : '暂无订单'}
@@ -114,6 +130,11 @@ function OrderListPage() {
           </div>
         )}
       </div>
+
+      <LoginSheet
+        visible={showLogin}
+        onClose={() => { setShowLogin(false); }}
+      />
     </div>
   );
 }

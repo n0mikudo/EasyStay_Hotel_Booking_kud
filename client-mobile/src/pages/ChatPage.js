@@ -6,6 +6,8 @@ import { useClientAuth } from '../contexts/ClientAuthContext';
 import { chatSessionService } from '../services/api';
 import LoginSheet from '../components/LoginSheet';
 import ChatHistoryDrawer from '../components/ChatHistoryDrawer';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import './ChatPage.css';
 
 const QUICK_QUESTIONS = [
@@ -141,6 +143,15 @@ function ChatPage() {
       await loadSessions();
     } catch (e) {
       Toast.show({ content: '删除失败', position: 'top' });
+    }
+  };
+
+  const handleRenameSession = async (sid, newTitle) => {
+    try {
+      await chatSessionService.renameSession(sid, newTitle);
+      await loadSessions();
+    } catch (e) {
+      Toast.show({ content: '重命名失败', position: 'top' });
     }
   };
 
@@ -352,11 +363,11 @@ function ChatPage() {
     }
 
     if (parts.length === 0) {
-      return <div className="msg-text">{content}</div>;
+      return <div className="msg-text markdown-body"><ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown></div>;
     }
 
     return (
-      <div className="msg-text">
+      <div className="msg-text markdown-body">
         {parts.map((part, i) => {
           if (part.type === 'hotel') {
             return (
@@ -369,7 +380,7 @@ function ChatPage() {
               </span>
             );
           }
-          return <span key={i}>{part.value}</span>;
+          return <ReactMarkdown key={i} remarkPlugins={[remarkGfm]}>{part.value}</ReactMarkdown>;
         })}
       </div>
     );
@@ -472,6 +483,7 @@ function ChatPage() {
         onSelectSession={handleSelectSession}
         onNewChat={handleNewChat}
         onDeleteSession={handleDeleteSession}
+        onRenameSession={handleRenameSession}
       />
 
       <LoginSheet

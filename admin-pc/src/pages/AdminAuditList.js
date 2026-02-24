@@ -22,6 +22,7 @@ import {
   SearchOutlined
 } from '@ant-design/icons';
 import { hotelService, userService } from '../services/api';
+import { getHotelRatingLabel } from '../utils/hotelRating';
 import './AuditList.css';
 
 const STATUS_OPTIONS = [
@@ -223,7 +224,7 @@ function AdminAuditList({ user }) {
       dataIndex: 'rating',
       key: 'rating',
       width: 80,
-      render: (rating) => rating ? '★'.repeat(rating) : '-'
+      render: (rating) => getHotelRatingLabel(rating)
     },
     {
       title: '状态',
@@ -390,7 +391,7 @@ function AdminAuditList({ user }) {
             <Descriptions.Item label="酒店名称" span={2}>{selectedHotel.name}</Descriptions.Item>
             <Descriptions.Item label="城市">{selectedHotel.city}</Descriptions.Item>
             <Descriptions.Item label="价格">¥{selectedHotel.price}起/晚</Descriptions.Item>
-            <Descriptions.Item label="星级">{selectedHotel.rating ? '★'.repeat(selectedHotel.rating) : '未设置'}</Descriptions.Item>
+            <Descriptions.Item label="星级">{getHotelRatingLabel(selectedHotel.rating)}</Descriptions.Item>
             <Descriptions.Item label="联系电话">{selectedHotel.phone || '未设置'}</Descriptions.Item>
             <Descriptions.Item label="商户">{users.find(u => u.id === selectedHotel.userId)?.username || '-'}</Descriptions.Item>
             <Descriptions.Item label="商户姓名">{users.find(u => u.id === selectedHotel.userId)?.name || '-'}</Descriptions.Item>

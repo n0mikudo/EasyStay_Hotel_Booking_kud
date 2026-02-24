@@ -28,6 +28,7 @@ import AdminSettings from './pages/AdminSettings';
 import AdminUserManagement from './pages/AdminUserManagement';
 import AdminMessageCenter from './pages/AdminMessageCenter';
 import BookingManagement from './pages/BookingManagement';
+import MerchantMessageCenter from './pages/MerchantMessageCenter';
 import Sidebar from './components/Sidebar';
 import NotificationDropdown from './components/NotificationDropdown';
 import './App.css';
@@ -186,6 +187,7 @@ function MerchantLayout({ onLogout, user }) {
             <Route path="/dashboard" element={<MerchantDashboard user={user} />} />
             <Route path="/entry" element={<MerchantHotelEntry />} />
             <Route path="/my-hotels" element={<MerchantHotelList user={user} />} />
+            <Route path="/messages" element={<MerchantMessageCenter />} />
             <Route path="/bookings" element={<BookingManagement user={user} />} />
             <Route path="/" element={<Navigate to="/merchant/dashboard" replace />} />
           </Routes>

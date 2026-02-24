@@ -3,22 +3,29 @@ import { useNavigate } from 'react-router-dom';
 import { Badge, Dropdown, List, Typography, Button, Space, message, Tooltip, Tag } from 'antd';
 import { BellOutlined, CheckOutlined, DeleteOutlined, ClockCircleOutlined, RightOutlined } from '@ant-design/icons';
 import messageService from '../services/messageService';
+import { resolveUserIdentity } from '../utils/userIdentity';
 
 const { Text, Paragraph } = Typography;
 
 const NotificationDropdown = ({ user }) => {
   const navigate = useNavigate();
+  const identity = resolveUserIdentity(user);
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
   const [visible, setVisible] = useState(false);
 
   const loadNotifications = async () => {
-    if (!user) return;
+    if (!identity.user) return;
+    if (identity.role === 'merchant' && !identity.userId) {
+      setNotifications([]);
+      message.warning('登录信息异常，请重新登录');
+      return;
+    }
     setLoading(true);
     try {
-      const params = { role: user.role };
-      if (user.role === 'admin') params.adminId = user.id;
-      else params.userId = user.id;
+      const params = { role: identity.role };
+      if (identity.role === 'admin') params.adminId = identity.userId;
+      else params.userId = identity.userId;
       const res = await messageService.getMessages(params);
       if (res.success) setNotifications(res.data || []);
     } catch {
@@ -31,7 +38,7 @@ const NotificationDropdown = ({ user }) => {
   const handleViewMessage = async (notification) => {
     if (!notification.read) {
       try {
-        const adminId = user?.role === 'admin' ? user.id : null;
+        const adminId = identity.role === 'admin' ? identity.userId : null;
         await messageService.markAsRead(notification.id, adminId);
         setNotifications(prev =>
           prev.map(m => m.id === notification.id ? { ...m, read: true } : m)
@@ -47,7 +54,7 @@ const NotificationDropdown = ({ user }) => {
   const handleMarkAsRead = async (messageId, e) => {
     e?.stopPropagation();
     try {
-      const adminId = user?.role === 'admin' ? user.id : null;
+      const adminId = identity.role === 'admin' ? identity.userId : null;
       await messageService.markAsRead(messageId, adminId);
       setNotifications(prev =>
         prev.map(m => m.id === messageId ? { ...m, read: true } : m)

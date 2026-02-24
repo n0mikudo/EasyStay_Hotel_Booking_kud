@@ -47,6 +47,49 @@
   margin-bottom: var(--spacing-md);
 }
 
+.hotel-filter-toolbar {
+  align-items: center;
+}
+
+.hotel-search-compact .ant-input,
+.hotel-search-compact .ant-btn {
+  height: 36px;
+}
+
+.hotel-status-toggle-wrap {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.hotel-status-toggle-btn {
+  border-radius: 999px !important;
+  border: 1px solid #d9d9d9;
+  font-weight: 500;
+  transition: all 0.25s ease;
+  transform: translateY(0);
+}
+
+.hotel-status-toggle-btn.is-active {
+  color: #fff !important;
+  border-color: #1677ff !important;
+  background: linear-gradient(135deg, #1677ff 0%, #4096ff 100%) !important;
+  box-shadow: 0 4px 12px rgba(22, 119, 255, 0.25);
+}
+
+.hotel-status-toggle-btn.is-inactive {
+  color: #595959 !important;
+  background: #fff !important;
+  border-color: #d9d9d9 !important;
+}
+
+.hotel-status-toggle-btn:hover {
+  transform: translateY(-1px);
+}
+
+.hotel-status-toggle-btn:active {
+  transform: scale(0.98);
+}
+
 .filter-space {
   display: flex;
   flex-wrap: wrap;

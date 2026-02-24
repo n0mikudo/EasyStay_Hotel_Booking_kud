@@ -31,6 +31,7 @@ import {
   UpOutlined
 } from '@ant-design/icons';
 import { hotelService, userService } from '../services/api';
+import { getHotelRatingLabel } from '../utils/hotelRating';
 import './HotelManagement.css';
 
 function AdminHotelManagement() {
@@ -43,6 +44,8 @@ function AdminHotelManagement() {
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10 });
   const [currentUser, setCurrentUser] = useState(null);
+  const [showOnline, setShowOnline] = useState(true);
+  const [showOffline, setShowOffline] = useState(true);
 
   useEffect(() => {
     const user = localStorage.getItem('user');
@@ -59,7 +62,7 @@ function AdminHotelManagement() {
   useEffect(() => {
     loadHotels();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pagination.current, pagination.pageSize, searchKeyword]);
+  }, [pagination.current, pagination.pageSize, searchKeyword, showOnline, showOffline]);
 
   const loadUsers = async () => {
     try {
@@ -71,10 +74,20 @@ function AdminHotelManagement() {
   };
 
   const loadHotels = async () => {
+    if (!showOnline && !showOffline) {
+      setHotels([]);
+      setTotal(0);
+      setSelectedRowKeys([]);
+      return;
+    }
     try {
       setLoading(true);
+      const statusList = [];
+      if (showOnline) statusList.push('approved');
+      if (showOffline) statusList.push('offline');
+      statusList.push('pending_merchant_confirm');
       const params = {
-        status: 'approved,offline,pending_merchant_confirm',
+        status: statusList.join(','),
         page: pagination.current,
         limit: pagination.pageSize,
         brief: 'true'
@@ -122,7 +135,7 @@ function AdminHotelManagement() {
 
   const handleBatchOffline = async () => {
     const ids = selectedRowKeys.filter(id => {
-      const h = filteredHotels.find(x => x.id === id);
+      const h = visibleHotels.find(x => x.id === id);
       return h && h.status === 'approved';
     });
     if (ids.length === 0) {
@@ -144,7 +157,7 @@ function AdminHotelManagement() {
 
   const handleBatchOnline = async () => {
     const ids = selectedRowKeys.filter(id => {
-      const h = filteredHotels.find(x => x.id === id);
+      const h = visibleHotels.find(x => x.id === id);
       return h && h.status === 'offline';
     });
     if (ids.length === 0) {
@@ -166,7 +179,7 @@ function AdminHotelManagement() {
 
   const handleBatchDelete = async () => {
     const ids = selectedRowKeys.filter(id => {
-      const h = filteredHotels.find(x => x.id === id);
+      const h = visibleHotels.find(x => x.id === id);
       return h && h.status === 'offline';
     });
     if (ids.length === 0) {
@@ -191,7 +204,7 @@ function AdminHotelManagement() {
     onChange: (keys) => setSelectedRowKeys(keys)
   };
 
-  const filteredHotels = hotels;
+  const visibleHotels = hotels;
 
   const getStatusTag = (status) => {
     const statusMap = {
@@ -225,7 +238,7 @@ function AdminHotelManagement() {
       title: '星级',
       dataIndex: 'rating',
       key: 'rating',
-      render: (rating) => rating ? '★'.repeat(rating) : '未设置'
+      render: (rating) => getHotelRatingLabel(rating)
     },
     {
       title: '联系电话',
@@ -309,28 +322,53 @@ function AdminHotelManagement() {
       </div>
 
       <Card>
-        <Row gutter={[16, 16]} style={{ marginBottom: 16 }} align="middle">
-          <Col flex="auto">
-            <Input
-              placeholder="搜索酒店名、所属用户、所属人姓名（支持模糊匹配）"
-              prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              onPressEnter={() => { setSearchKeyword(searchInput); setPagination(prev => ({ ...prev, current: 1 })); }}
-              allowClear
-              onClear={() => { setSearchInput(''); setSearchKeyword(''); setPagination(prev => ({ ...prev, current: 1 })); }}
-              style={{ maxWidth: 400 }}
-            />
-          </Col>
+        <Row gutter={[12, 12]} style={{ marginBottom: 16 }} align="middle" className="hotel-filter-toolbar">
           <Col>
-            <Button
-              type="primary"
-              icon={<SearchOutlined />}
-              onClick={() => { setSearchKeyword(searchInput); setPagination(prev => ({ ...prev, current: 1 })); }}
-            >
-              搜索
-            </Button>
+            <Space.Compact className="hotel-search-compact">
+              <Input
+                placeholder="搜索酒店名、所属用户、所属人姓名（支持模糊匹配）"
+                prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onPressEnter={() => { setSearchKeyword(searchInput); setPagination(prev => ({ ...prev, current: 1 })); }}
+                allowClear
+                onClear={() => { setSearchInput(''); setSearchKeyword(''); setPagination(prev => ({ ...prev, current: 1 })); }}
+                style={{ width: 360 }}
+              />
+              <Button
+                type="primary"
+                icon={<SearchOutlined />}
+                onClick={() => { setSearchKeyword(searchInput); setPagination(prev => ({ ...prev, current: 1 })); }}
+              >
+                搜索
+              </Button>
+            </Space.Compact>
           </Col>
+          <Col flex="auto" className="hotel-status-toggle-wrap">
+            <Space size="small">
+              <Button
+                className={`hotel-status-toggle-btn ${showOnline ? 'is-active' : 'is-inactive'}`}
+                onClick={() => {
+                  setShowOnline(prev => !prev);
+                  setPagination(prev => ({ ...prev, current: 1 }));
+                  setSelectedRowKeys([]);
+                }}
+              >
+                上线酒店
+              </Button>
+              <Button
+                className={`hotel-status-toggle-btn ${showOffline ? 'is-active' : 'is-inactive'}`}
+                onClick={() => {
+                  setShowOffline(prev => !prev);
+                  setPagination(prev => ({ ...prev, current: 1 }));
+                  setSelectedRowKeys([]);
+                }}
+              >
+                下线酒店
+              </Button>
+            </Space>
+          </Col>
+          <Col flex="auto" />
           {selectedRowKeys.length > 0 && (
             <>
               <Col>
@@ -342,7 +380,7 @@ function AdminHotelManagement() {
                   cancelText="取消"
                 >
                   <Button icon={<DownOutlined />}>
-                    批量下线 ({selectedRowKeys.filter(id => filteredHotels.find(x => x.id === id)?.status === 'approved').length})
+                    批量下线 ({selectedRowKeys.filter(id => visibleHotels.find(x => x.id === id)?.status === 'approved').length})
                   </Button>
                 </Popconfirm>
               </Col>
@@ -355,7 +393,7 @@ function AdminHotelManagement() {
                   cancelText="取消"
                 >
                   <Button type="primary" icon={<UpOutlined />}>
-                    批量上线 ({selectedRowKeys.filter(id => filteredHotels.find(x => x.id === id)?.status === 'offline').length})
+                    批量上线 ({selectedRowKeys.filter(id => visibleHotels.find(x => x.id === id)?.status === 'offline').length})
                   </Button>
                 </Popconfirm>
               </Col>
@@ -368,7 +406,7 @@ function AdminHotelManagement() {
                   cancelText="取消"
                 >
                   <Button danger icon={<DeleteOutlined />}>
-                    批量删除 ({selectedRowKeys.filter(id => filteredHotels.find(x => x.id === id)?.status === 'offline').length})
+                    批量删除 ({selectedRowKeys.filter(id => visibleHotels.find(x => x.id === id)?.status === 'offline').length})
                   </Button>
                 </Popconfirm>
               </Col>
@@ -378,7 +416,7 @@ function AdminHotelManagement() {
         <Table
           rowSelection={rowSelection}
           columns={columns}
-          dataSource={filteredHotels}
+          dataSource={visibleHotels}
           rowKey="id"
           loading={loading}
           pagination={{

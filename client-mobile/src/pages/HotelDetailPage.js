@@ -39,6 +39,8 @@ import {
   PhonebookOutline
 } from 'antd-mobile-icons';
 import { hotelService, bookingService } from '../services/api';
+import { useClientAuth } from '../contexts/ClientAuthContext';
+import LoginSheet from '../components/LoginSheet';
 import CascadingDatePicker from '../components/CascadingDatePicker';
 import './HotelDetailPage.css';
 
@@ -48,8 +50,9 @@ function HotelDetailPage() {
   const routeLocation = useLocation();
   const passedCheckIn = routeLocation.state?.checkIn;
   const passedCheckOut = routeLocation.state?.checkOut;
+  const { user, isLoggedIn } = useClientAuth();
+  const [showLogin, setShowLogin] = useState(false);
 
-  // 酒店数据状态
   const [hotel, setHotel] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isFavorite, setIsFavorite] = useState(false);
@@ -157,6 +160,10 @@ function HotelDetailPage() {
    * 处理预订 - 需已选房型
    */
   const handleBooking = () => {
+    if (!isLoggedIn) {
+      setShowLogin(true);
+      return;
+    }
     if (!selectedRoomType) {
       Toast.show({ content: '请先选择房型', position: 'center' });
       return;
@@ -189,7 +196,8 @@ function HotelDetailPage() {
         nights,
         guestCount,
         roomCount,
-        totalPrice
+        totalPrice,
+        clientUserId: user?.id
       });
 
       if (response.data.success) {
@@ -707,6 +715,8 @@ function HotelDetailPage() {
           title={`选择${dateType === 'checkIn' ? '入住' : '离店'}日期`}
         />
       </Popup>
+
+      <LoginSheet visible={showLogin} onClose={() => setShowLogin(false)} />
     </div>
   );
 }

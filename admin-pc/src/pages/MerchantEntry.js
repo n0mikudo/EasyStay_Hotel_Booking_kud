@@ -1,5 +1,5 @@
 /**
- * 商户录入页面组件
+ * 酒店录入页面组件
  *
  * 功能：
  * 1. 酒店信息录入表单
@@ -166,7 +166,7 @@ function MerchantEntry() {
       <div className="page-header">
         <div className="header-content">
           <div>
-            <h1 className="page-title">🏨 商户录入</h1>
+            <h1 className="page-title">🏨 酒店录入</h1>
             <p className="page-subtitle">录入酒店信息并提交审核</p>
           </div>
           <Button

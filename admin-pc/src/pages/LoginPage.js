@@ -98,7 +98,7 @@ function LoginPage() {
             <div className="login-tips">
               <p>还没有账号？<Link to="/register">去注册</Link></p>
               <p>测试账号：admin / admin123（管理员）</p>
-              <p>测试账号：merchant1 / merchant123（商户）</p>
+              <p>测试账号：merchant / merchant123（商户）</p>
             </div>
           </Form>
         </Card>

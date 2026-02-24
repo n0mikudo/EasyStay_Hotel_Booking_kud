@@ -161,6 +161,7 @@ export const chatSessionService = {
   createSession: (userId, mode) => api.post('/client/chat/sessions', { user_id: userId, mode }),
   getSession: (sessionId) => api.get(`/client/chat/sessions/${sessionId}`),
   deleteSession: (sessionId) => api.delete(`/client/chat/sessions/${sessionId}`),
+  renameSession: (sessionId, title) => api.put(`/client/chat/sessions/${sessionId}`, { title }),
 };
 
 export default api;

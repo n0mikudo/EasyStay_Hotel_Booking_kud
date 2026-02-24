@@ -109,7 +109,7 @@ export const hotelService = {
    * @param {string} status - 新状态
    * @returns {Promise} 请求Promise
    */
-  updateHotelStatus: (id, status, adminInfo = {}) => api.put(`/hotels/${id}/status`, { status, adminId: adminInfo.id, adminUsername: adminInfo.username }),
+  updateHotelStatus: (id, status, adminInfo = {}) => api.put(`/hotels/${id}/status`, { status, adminId: adminInfo.id, adminUsername: adminInfo.username, rejectReason: adminInfo.rejectReason }),
 
   /**
    * 删除酒店
@@ -160,6 +160,7 @@ export const statsService = {
    * @returns {Promise} 请求Promise
    */
   getStats: () => api.get('/stats'),
+  getRiskAlerts: () => api.get('/stats/risk-alerts'),
 
   /**
    * 获取分析报表数据（服务端预计算，避免传输全部酒店数据）
@@ -202,7 +203,8 @@ export const authService = {
  * 预订服务API
  */
 export const bookingService = {
-  getBookings: (params) => api.get('/bookings', { params })
+  getBookings: (params) => api.get('/bookings', { params }),
+  deleteBooking: (id) => api.delete(`/bookings/${id}`)
 };
 
 /**

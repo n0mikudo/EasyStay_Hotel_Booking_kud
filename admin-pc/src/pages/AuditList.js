@@ -104,10 +104,10 @@ function AuditList() {
    * 处理审核拒绝
    * @param {string} id - 酒店ID
    */
-  const handleReject = async (id) => {
+  const handleReject = async (id, rejectReason) => {
     try {
       const adminInfo = currentUser ? { id: currentUser.id, username: currentUser.name || currentUser.username } : {};
-      const response = await hotelService.updateHotelStatus(id, 'rejected', adminInfo);
+      const response = await hotelService.updateHotelStatus(id, 'rejected', { ...adminInfo, rejectReason });
       if (response.data.success) {
         message.success('❌ 已拒绝该酒店');
         fetchHotels();
@@ -117,6 +117,27 @@ function AuditList() {
     } catch (error) {
       message.error('操作失败，请检查网络连接');
     }
+  };
+
+  const showRejectModal = (id) => {
+    Modal.confirm({
+      title: '拒绝酒店',
+      content: (
+        <Input.TextArea
+          id="rejectReasonInput"
+          placeholder="请输入拒绝原因（可选）"
+          rows={3}
+          style={{ marginTop: 8 }}
+        />
+      ),
+      okText: '确认拒绝',
+      okButtonProps: { danger: true },
+      cancelText: '取消',
+      onOk: () => {
+        const reason = document.getElementById('rejectReasonInput')?.value || '';
+        return handleReject(id, reason);
+      }
+    });
   };
 
   /**
@@ -247,23 +268,15 @@ function AuditList() {
               通过
             </Button>
           </Popconfirm>
-          <Popconfirm
-            title="确认拒绝该酒店？"
-            description="拒绝后该酒店将不会上线"
-            onConfirm={() => handleReject(record.id)}
-            okText="确认"
-            cancelText="取消"
-            okButtonProps={{ danger: true }}
+          <Button
+            danger
+            size="small"
+            icon={<CloseOutlined />}
+            className="reject-btn"
+            onClick={() => showRejectModal(record.id)}
           >
-            <Button
-              danger
-              size="small"
-              icon={<CloseOutlined />}
-              className="reject-btn"
-            >
-              拒绝
-            </Button>
-          </Popconfirm>
+            拒绝
+          </Button>
         </Space>
       )
     }
@@ -342,16 +355,10 @@ function AuditList() {
           <Button key="close" onClick={() => setDetailModalVisible(false)}>
             关闭
           </Button>,
-          <Popconfirm
-            key="reject"
-            title="确认拒绝该酒店？"
-            onConfirm={() => {
-              handleReject(selectedHotel?.id);
-              setDetailModalVisible(false);
-            }}
-          >
-            <Button danger>拒绝</Button>
-          </Popconfirm>,
+          <Button key="reject" danger onClick={() => {
+            setDetailModalVisible(false);
+            showRejectModal(selectedHotel?.id);
+          }}>拒绝</Button>,
           <Popconfirm
             key="approve"
             title="确认通过该酒店？"
