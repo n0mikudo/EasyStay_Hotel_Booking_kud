@@ -8,6 +8,7 @@ on:
 
 env:
   NPM_CONFIG_PRODUCTION: "false"
+  NPM_CONFIG_OMIT: "optional"
 
 jobs:
   mobile-build:
@@ -25,6 +26,9 @@ jobs:
 
       - name: Install mobile deps
         run: npm ci --include=dev --prefix client-mobile
+        env:
+          NPM_CONFIG_PRODUCTION: "false"
+          NPM_CONFIG_OMIT: "optional"
 
       - name: Build mobile
         run: CI= npm run build --prefix client-mobile
@@ -44,6 +48,9 @@ jobs:
 
       - name: Install admin deps
         run: npm ci --include=dev --prefix admin-pc
+        env:
+          NPM_CONFIG_PRODUCTION: "false"
+          NPM_CONFIG_OMIT: "optional"
 
       - name: Typecheck admin
         run: npm run typecheck --prefix admin-pc
