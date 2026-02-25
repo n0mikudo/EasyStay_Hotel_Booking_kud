@@ -11,7 +11,11 @@
   - 管理端: https://easystay4u.site
   - 移动端: https://easystay4u.site/mobile/
   - 后端 API: https://easystay4u.site/api
-  - IP 直连（备用）: http://81.71.15.150
+  - API 文档页: http://81.71.15.150/api-docs/
+  - IP 直连（备案前推荐）:
+    - 管理端: http://81.71.15.150/
+    - 移动端: http://81.71.15.150/mobile/
+    - 健康检查: http://81.71.15.150/api/health
 
 ## 项目结构
 
