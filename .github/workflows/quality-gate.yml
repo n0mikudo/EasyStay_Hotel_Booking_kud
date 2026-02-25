@@ -6,6 +6,9 @@ on:
   push:
     branches: ["main"]
 
+env:
+  NPM_CONFIG_PRODUCTION: "false"
+
 jobs:
   mobile-build:
     runs-on: ubuntu-latest
@@ -21,7 +24,7 @@ jobs:
           cache-dependency-path: client-mobile/package-lock.json
 
       - name: Install mobile deps
-        run: npm ci --prefix client-mobile
+        run: npm ci --include=dev --prefix client-mobile
 
       - name: Build mobile
         run: CI= npm run build --prefix client-mobile
@@ -40,7 +43,7 @@ jobs:
           cache-dependency-path: admin-pc/package-lock.json
 
       - name: Install admin deps
-        run: npm ci --prefix admin-pc
+        run: npm ci --include=dev --prefix admin-pc
 
       - name: Typecheck admin
         run: npm run typecheck --prefix admin-pc
