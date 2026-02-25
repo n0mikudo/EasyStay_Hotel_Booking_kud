@@ -22,6 +22,7 @@ const bodyParser = require('body-parser');
 const swaggerUi = require('swagger-ui-express');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const https = require('https');
 const http = require('http');
 const openapi = require('./openapi');
@@ -53,6 +54,9 @@ const CONFIG_FILE = path.join(__dirname, 'data', 'system_config.json');
 const LOGS_FILE = path.join(__dirname, 'data', 'system_logs.json');
 const CLIENT_USERS_FILE = path.join(__dirname, 'data', 'client_users.json');
 const CHAT_SESSIONS_FILE = path.join(__dirname, 'data', 'chat_sessions.json');
+const IMAGE_CACHE_DIR = path.join(__dirname, 'data', 'image-cache');
+const IMAGE_PROXY_HOST_ALLOWLIST = new Set(['picsum.photos']);
+const BANNER_FALLBACK_IMAGE = '/mobile/图片/banner-fallback.png';
 
 /**
  * 初始化数据文件
@@ -103,9 +107,104 @@ const initDataFile = () => {
   if (!fs.existsSync(CHAT_SESSIONS_FILE)) {
     fs.writeFileSync(CHAT_SESSIONS_FILE, JSON.stringify([], null, 2));
   }
+  if (!fs.existsSync(IMAGE_CACHE_DIR)) {
+    fs.mkdirSync(IMAGE_CACHE_DIR, { recursive: true });
+  }
 };
 
 initDataFile();
+
+const imageCacheDataPath = (hash) => path.join(IMAGE_CACHE_DIR, `${hash}.bin`);
+const imageCacheMetaPath = (hash) => path.join(IMAGE_CACHE_DIR, `${hash}.json`);
+
+const getImageCacheHash = (url) => crypto.createHash('sha1').update(url).digest('hex');
+
+const isAllowedProxyImageUrl = (rawUrl) => {
+  try {
+    const parsed = new URL(rawUrl);
+    if (!['http:', 'https:'].includes(parsed.protocol)) return false;
+    return IMAGE_PROXY_HOST_ALLOWLIST.has(parsed.hostname);
+  } catch {
+    return false;
+  }
+};
+
+const readImageCache = (url) => {
+  const hash = getImageCacheHash(url);
+  const dataPath = imageCacheDataPath(hash);
+  const metaPath = imageCacheMetaPath(hash);
+  if (!fs.existsSync(dataPath) || !fs.existsSync(metaPath)) return null;
+  try {
+    const contentType = JSON.parse(fs.readFileSync(metaPath, 'utf8'))?.contentType || 'image/jpeg';
+    const buffer = fs.readFileSync(dataPath);
+    return { buffer, contentType };
+  } catch {
+    return null;
+  }
+};
+
+const writeImageCache = (url, buffer, contentType) => {
+  const hash = getImageCacheHash(url);
+  fs.writeFileSync(imageCacheDataPath(hash), buffer);
+  fs.writeFileSync(imageCacheMetaPath(hash), JSON.stringify({
+    contentType: contentType || 'image/jpeg',
+    updatedAt: new Date().toISOString()
+  }));
+};
+
+const fetchImageBuffer = (url, redirectLeft = 3) => new Promise((resolve, reject) => {
+  const parsed = new URL(url);
+  const lib = parsed.protocol === 'https:' ? https : http;
+  const req = lib.get(url, (r) => {
+    const statusCode = r.statusCode || 500;
+    if ([301, 302, 303, 307, 308].includes(statusCode)) {
+      const location = r.headers.location;
+      r.resume();
+      if (!location || redirectLeft <= 0) {
+        reject(new Error('upstream_redirect_failed'));
+        return;
+      }
+      const nextUrl = new URL(location, url).toString();
+      fetchImageBuffer(nextUrl, redirectLeft - 1).then(resolve).catch(reject);
+      return;
+    }
+
+    if (statusCode >= 400) {
+      reject(new Error(`upstream_status_${statusCode}`));
+      r.resume();
+      return;
+    }
+    const contentType = String(r.headers['content-type'] || '').toLowerCase();
+    if (!contentType.startsWith('image/')) {
+      reject(new Error('upstream_not_image'));
+      r.resume();
+      return;
+    }
+    const chunks = [];
+    r.on('data', (chunk) => chunks.push(chunk));
+    r.on('end', () => resolve({ buffer: Buffer.concat(chunks), contentType }));
+  });
+  req.setTimeout(10000, () => req.destroy(new Error('upstream_timeout')));
+  req.on('error', reject);
+});
+
+const toClientImageUrl = (url) => {
+  if (!url || typeof url !== 'string') return null;
+  const raw = url.trim();
+  if (!raw) return null;
+  if (/^https?:\/\//i.test(raw) && isAllowedProxyImageUrl(raw)) {
+    return `/api/image-proxy?url=${encodeURIComponent(raw)}`;
+  }
+  return raw;
+};
+
+const normalizeHotelImages = (hotel) => {
+  const list = Array.isArray(hotel.images)
+    ? hotel.images
+    : (hotel.images ? String(hotel.images).split(',').map(s => s.trim()) : []);
+  const normalized = list.map(toClientImageUrl).filter(Boolean);
+  return normalized.length ? normalized : [BANNER_FALLBACK_IMAGE];
+};
 
 // ==================== 内存缓存层 ====================
 // 所有数据在内存中维护，读操作 ~0ms；写操作更新内存后异步落盘，合并高频写入
@@ -717,7 +816,10 @@ app.get('/api/hotels', (req, res) => {
           for (const k of BRIEF_FIELDS) if (h[k] !== undefined) o[k] = h[k];
           return o;
         })
-      : resultHotels;
+      : resultHotels.map(h => ({
+          ...h,
+          images: normalizeHotelImages(h)
+        }));
 
     res.json({
       success: true,
@@ -766,6 +868,39 @@ app.get('/api/hotels/hot-tags', (req, res) => {
     res.json({ success: true, data: tags });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
+  }
+});
+
+/**
+ * 图片代理（白名单域名）+ 本地缓存
+ * GET /api/image-proxy?url=<encoded-image-url>
+ */
+app.get('/api/image-proxy', async (req, res) => {
+  const rawUrl = typeof req.query.url === 'string' ? req.query.url.trim() : '';
+  if (!rawUrl) {
+    return res.status(400).json({ success: false, message: '缺少 url 参数' });
+  }
+  if (!isAllowedProxyImageUrl(rawUrl)) {
+    return res.status(403).json({ success: false, message: '图片域名不在白名单' });
+  }
+
+  try {
+    const cached = readImageCache(rawUrl);
+    if (cached) {
+      res.setHeader('Content-Type', cached.contentType);
+      res.setHeader('Cache-Control', 'public, max-age=604800');
+      res.setHeader('X-Image-Cache', 'HIT');
+      return res.send(cached.buffer);
+    }
+
+    const remote = await fetchImageBuffer(rawUrl);
+    writeImageCache(rawUrl, remote.buffer, remote.contentType);
+    res.setHeader('Content-Type', remote.contentType || 'image/jpeg');
+    res.setHeader('Cache-Control', 'public, max-age=604800');
+    res.setHeader('X-Image-Cache', 'MISS');
+    return res.send(remote.buffer);
+  } catch (e) {
+    return res.status(502).json({ success: false, message: '图片拉取失败' });
   }
 });
 
@@ -2447,30 +2582,52 @@ app.get('/api/system-logs', (req, res) => {
  * IP 定位（当浏览器 GPS 不可用时备用，如桌面端）
  * GET /api/geo/ip
  */
-app.get('/api/geo/ip', (req, res) => {
+app.get('/api/geo/ip', async (req, res) => {
+  const requestJson = (url) => new Promise((resolve, reject) => {
+    const lib = url.startsWith('https') ? https : http;
+    lib.get(url, (r) => {
+      let data = '';
+      r.on('data', (chunk) => { data += chunk; });
+      r.on('end', () => {
+        try {
+          resolve(JSON.parse(data));
+        } catch (e) {
+          reject(new Error('parse_failed'));
+        }
+      });
+    }).on('error', reject);
+  });
+
   const forwarded = req.headers['x-forwarded-for'];
   const clientIp = (forwarded ? forwarded.split(',')[0].trim() : null) || req.ip || req.connection?.remoteAddress || '';
   const ip = (clientIp === '::1' || clientIp === '127.0.0.1') ? '' : clientIp.replace(/^::ffff:/, '');
-  const url = ip ? `http://ip-api.com/json/${ip}?lang=zh-CN&fields=status,city,regionName` : 'http://ip-api.com/json/?lang=zh-CN&fields=status,city,regionName';
-  http.get(url, (r) => {
-    let data = '';
-    r.on('data', (chunk) => { data += chunk; });
-    r.on('end', () => {
-      try {
-        const json = JSON.parse(data);
-        if (json.status === 'success' && (json.city || json.regionName)) {
-          const city = json.city || json.regionName || '';
-          res.json({ success: true, data: { city } });
-        } else {
-          res.json({ success: false, message: 'IP 定位失败' });
-        }
-      } catch (e) {
-        res.status(500).json({ success: false, message: '解析失败' });
+
+  // 1) 优先百度 IP 定位（国内可用性更高，且返回中文城市）
+  try {
+    const ak = process.env.BAIDU_MAP_AK;
+    if (ak) {
+      const url = ip
+        ? `https://api.map.baidu.com/location/ip?ak=${ak}&ip=${encodeURIComponent(ip)}&coor=bd09ll`
+        : `https://api.map.baidu.com/location/ip?ak=${ak}&coor=bd09ll`;
+      const json = await requestJson(url);
+      const city = json?.content?.address_detail?.city || json?.content?.address || '';
+      if (json?.status === 0 && city) {
+        return res.json({ success: true, data: { city } });
       }
-    });
-  }).on('error', () => {
-    res.status(502).json({ success: false, message: 'IP 定位服务不可用' });
-  });
+    }
+  } catch (e) { /* 继续备用 */ }
+
+  // 2) 备用 ip-api（国外服务，部分网络可能波动）
+  try {
+    const url = ip ? `http://ip-api.com/json/${ip}?lang=zh-CN&fields=status,city,regionName` : 'http://ip-api.com/json/?lang=zh-CN&fields=status,city,regionName';
+    const json = await requestJson(url);
+    if (json?.status === 'success' && (json.city || json.regionName)) {
+      const city = json.city || json.regionName || '';
+      return res.json({ success: true, data: { city } });
+    }
+  } catch (e) { /* 继续备用 */ }
+
+  res.status(502).json({ success: false, message: 'IP 定位服务不可用' });
 });
 
 /**
@@ -2774,6 +2931,13 @@ const BOOKING_EDGE_REGEX = /(预订|预定|下单|订房|订这家|帮我订|立
 const REF_HOTEL_REGEX = /(这家|这个酒店|上一家|上一个)/;
 const RECOMMEND_INTENT_REGEX = /(推荐|帮我找|找酒店|住哪|哪里好|适合|民宿|酒店|有没有|想住)/;
 const HOTEL_NAME_HINT_REGEX = /([\u4e00-\u9fa5A-Za-z0-9·\-\s]{2,40}(?:酒店|宾馆|旅馆|客栈|民宿|度假村|大酒店))/;
+const COZE_RECOMMEND_FORMAT_GUIDE = [
+  '【输出格式规则】',
+  '1) 推荐酒店时，请使用有序列表，从 1. 开始连续编号。',
+  '2) 每个条目必须是两行：第一行仅写酒店名称；第二行写“价格/评分/亮点”。',
+  '3) 每个条目之间空一行，不要使用 markdown 表格。',
+  '4) 仅在酒店名称行使用 [[hotel:id|name]] 标记，不要把标记放到描述行。'
+].join('\n');
 
 function normalizeSessionState(sess) {
   if (!sess) return;
@@ -2930,6 +3094,15 @@ function extractRecommendedHotelIds(content) {
   return [...new Set(ids)];
 }
 
+function normalizeAssistantMarkdown(content) {
+  if (!content || typeof content !== 'string') return '';
+  return content
+    .replace(/\r\n?/g, '\n')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 function buildEdgeReply(intent, resolvedHotelId, dialogState) {
   const hotels = readHotels();
   const pickHotel = resolvedHotelId
@@ -3072,6 +3245,10 @@ app.post('/api/chat', async (req, res) => {
     cozeConvId = currentSession.coze_conversation_ids[modeKey] || currentSession.coze_conversation_id || null;
   }
 
+  const cozeInputText = hasRecommendIntent
+    ? `${inputText}\n\n${COZE_RECOMMEND_FORMAT_GUIDE}`
+    : inputText;
+
   const body = JSON.stringify({
     bot_id: botId,
     user_id: cozeUserId,
@@ -3079,7 +3256,7 @@ app.post('/api/chat', async (req, res) => {
     auto_save_history: true,
     additional_messages: [{
       role: 'user',
-      content: inputText,
+      content: cozeInputText,
       content_type: 'text'
     }],
     ...(cozeConvId ? { conversation_id: cozeConvId } : {})
@@ -3159,12 +3336,13 @@ app.post('/api/chat', async (req, res) => {
           const sess = storedSessions.find(s => s.id === session_id && s.user_id === user_id);
           if (sess) {
             normalizeSessionState(sess);
-            sess.messages.push({ role: 'assistant', content: fullAssistantContent, time: new Date().toISOString() });
+            const normalizedAssistantContent = normalizeAssistantMarkdown(fullAssistantContent);
+            sess.messages.push({ role: 'assistant', content: normalizedAssistantContent, time: new Date().toISOString() });
             if (savedConvId) {
               sess.coze_conversation_ids[modeKey] = savedConvId;
               sess.coze_conversation_id = savedConvId; // 兼容旧字段
             }
-            const recommendedHotels = extractRecommendedHotels(fullAssistantContent);
+            const recommendedHotels = extractRecommendedHotels(normalizedAssistantContent);
             const rankedHotels = recommendedHotels.map(h => h.id);
             if (rankedHotels.length > 0) {
               sess.dialog_state.last_recommended_hotels = rankedHotels;

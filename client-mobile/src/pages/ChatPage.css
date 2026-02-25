@@ -132,16 +132,21 @@
 
 /* Hotel link */
 .hotel-link {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
   color: var(--color-primary);
   font-weight: var(--font-weight-semibold);
   background: var(--color-primary-bg);
-  padding: 2px 8px;
+  padding: 1px 8px;
   border-radius: var(--radius-sm);
-  margin: 2px 0;
+  margin: 0 2px 0 0;
   cursor: pointer;
   border: 1px solid rgba(67, 56, 202, 0.15);
   transition: all var(--transition-fast);
+  vertical-align: baseline;
+  line-height: 1.35;
+  white-space: normal;
 }
 
 .hotel-link:active {
@@ -273,10 +278,13 @@
 }
 
 /* Markdown body styles inside chat bubbles */
-.markdown-body p { margin: 0 0 0.4em; }
+.markdown-body { line-height: 1.7; }
+.markdown-body p { margin: 0 0 0.45em; }
 .markdown-body p:last-child { margin-bottom: 0; }
-.markdown-body ul, .markdown-body ol { margin: 0.3em 0; padding-left: 1.4em; }
-.markdown-body li { margin: 0.15em 0; }
+.markdown-body ul, .markdown-body ol { margin: 0.4em 0 0.5em; padding-left: 1.35em; }
+.markdown-body li { margin: 0.28em 0; }
+.markdown-body li > p { margin: 0; display: inline; }
+.markdown-body li p + p { display: block; margin-top: 0.28em; }
 .markdown-body strong { font-weight: 600; }
 .markdown-body h1, .markdown-body h2, .markdown-body h3 { margin: 0.5em 0 0.3em; font-size: 1em; font-weight: 600; }
 .markdown-body code { background: rgba(0,0,0,0.06); padding: 1px 4px; border-radius: 3px; font-size: 0.9em; }

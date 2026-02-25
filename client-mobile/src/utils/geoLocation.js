@@ -10,12 +10,6 @@ const getApiBase = () => {
   return '/api';
 };
 
-function toCityFormat(name) {
-  if (!name || !String(name).trim()) return null;
-  const s = String(name).trim();
-  return /[市地区州]$/.test(s) ? s : s + '市';
-}
-
 function hasGarbledChars(text) {
   if (!text) return false;
   return String(text).includes('�');
@@ -39,16 +33,33 @@ function normalizeCityText(name) {
   return String(repaired).trim();
 }
 
+function stripCitySuffix(name) {
+  return String(name || '').replace(/[市地区州盟]$/, '');
+}
+
+function isDistrictLevelName(name) {
+  if (!name) return false;
+  return /(区|县|旗|镇|乡|街道)$/.test(String(name));
+}
+
 function matchCity(name) {
   const normalized = normalizeCityText(name);
-  const formatted = toCityFormat(normalized);
-  if (!formatted) return null;
+  if (!normalized) return null;
+  if (!/[\u4e00-\u9fa5]/.test(normalized)) return null;
+  if (isDistrictLevelName(normalized)) return null;
+
+  const normalizedBase = stripCitySuffix(normalized);
   const m = flatCities.find(
-    f => f.label === formatted ||
+    f => f.label === normalized ||
+      stripCitySuffix(f.label) === normalizedBase ||
       f.label.includes(normalized) ||
-      normalized.includes(f.label.replace(/[市地区州]$/, ''))
+      normalized.includes(stripCitySuffix(f.label))
   );
-  return m ? m.label : formatted;
+  return m ? m.label : null;
+}
+
+export function normalizeDetectedCity(name) {
+  return matchCity(name) || null;
 }
 
 function parseCityFromData(data) {
@@ -62,18 +73,8 @@ function parseCityFromData(data) {
   for (const c of candidates) {
     const name = normalizeCityText(c);
     if (!name) continue;
-    const withSuffix = name.endsWith('市') || name.endsWith('地区') || name.endsWith('州') ? name : name + '市';
-    const match = flatCities.find(
-      f => f.label === withSuffix || f.label === name || f.label.includes(name) || name.includes(f.label.replace(/[市地区州]$/, ''))
-    );
-    if (match) return match.label;
-    if (flatCities.some(f => f.label === withSuffix)) return withSuffix;
-  }
-
-  const first = normalizeCityText(city || locality || province);
-  if (first) {
-    const withSuffix = first.endsWith('市') || first.endsWith('地区') || first.endsWith('州') ? first : first + '市';
-    return withSuffix;
+    const matched = matchCity(name);
+    if (matched) return matched;
   }
   return null;
 }
@@ -120,7 +121,7 @@ export async function reverseGeocode(lat, lng) {
       const data = await res.json();
       const addr = data.address || {};
       const city = addr.city || addr.town || addr.village || addr.county || addr.state || '';
-      if (city) return matchCity(city) || toCityFormat(city);
+      if (city) return matchCity(city);
     }
   } catch { /* 忽略 */ }
 
@@ -139,21 +140,11 @@ async function getLocationCityByIP() {
     if (!res.ok) throw new Error();
     const json = await res.json();
     if (json.success && json.data && json.data.city) {
-      const c = matchCity(json.data.city) || toCityFormat(json.data.city);
+      const c = matchCity(json.data.city);
       if (c && !hasGarbledChars(c)) return { city: c };
     }
   } catch { /* 忽略 */ }
   return { error: 'IP 定位失败' };
-}
-
-/**
- * 检查是否在 HTTPS 或 localhost 环境下
- * @returns {boolean}
- */
-function isSecureContext() {
-  return window.location.protocol === 'https:' || 
-         window.location.hostname === 'localhost' || 
-         window.location.hostname === '127.0.0.1';
 }
 
 /**
@@ -162,15 +153,6 @@ function isSecureContext() {
  * @returns {Promise<{ city: string }|{ error: string }>}
  */
 export async function getLocationCity() {
-  // 如果不是安全上下文（HTTP 且非 localhost），直接使用 IP 定位
-  if (!isSecureContext()) {
-    const ipResult = await getLocationCityByIP();
-    if (ipResult.city) {
-      return ipResult;
-    }
-    return { error: '当前环境不支持浏览器定位，请使用 HTTPS 访问' };
-  }
-
   if (!navigator.geolocation) {
     return getLocationCityByIP();
   }
@@ -191,10 +173,10 @@ export async function getLocationCity() {
         }
         
         if (err.code === 1) {
-          resolve({ error: '您已拒绝定位权限，正在使用 IP 定位...' });
+          resolve({ error: '未授予定位权限，且 IP 定位失败' });
           return;
         }
-        const msg = err.code === 2 ? '定位失败，请检查网络或定位服务是否开启' : '定位超时';
+        const msg = err.code === 2 ? '定位失败，请检查网络或定位服务是否开启（HTTP 下部分浏览器会限制 GPS）' : '定位超时';
         resolve({ error: msg });
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }

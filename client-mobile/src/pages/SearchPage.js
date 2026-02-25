@@ -35,17 +35,25 @@ import {
 } from 'antd-mobile-icons';
 import { hotelService } from '../services/api';
 import CityPicker from '../components/CityPicker';
-import { getLocationCity } from '../utils/geoLocation';
+import { getLocationCity, normalizeDetectedCity } from '../utils/geoLocation';
 import CascadingDatePicker from '../components/CascadingDatePicker';
 import './SearchPage.css';
 
 const FILTER_STORAGE_KEY = 'easystay_search_filters';
 const HERO_BANNER_IMAGE = '/mobile/图片/图片1.png';
+const BANNER_FALLBACK_IMAGE = '/mobile/图片/banner-fallback.png';
 
 const loadSavedFilters = () => {
   try {
     const raw = sessionStorage.getItem(FILTER_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : {};
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return {
+      ...parsed,
+      // 历史脏数据清理：非法城市名（如拼音/区县）不再回填到首页
+      location: normalizeDetectedCity(parsed.location) || '',
+      bannerCity: normalizeDetectedCity(parsed.bannerCity) || null
+    };
   } catch { return {}; }
 };
 
@@ -80,7 +88,6 @@ function SearchPage() {
   const [cityPickerVisible, setCityPickerVisible] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
   const [bannerHotels, setBannerHotels] = useState([]);
-  const [bannerLoading, setBannerLoading] = useState(false);
   const [bannerCity, setBannerCity] = useState(saved.bannerCity || null);
 
   // 星级选项（与录入表单一致）
@@ -134,7 +141,6 @@ function SearchPage() {
 
   const fetchCityBanner = async (city) => {
     try {
-      setBannerLoading(true);
       const response = await hotelService.getHotels({ status: 'approved', city, limit: 5 });
       if (response.data.success && response.data.data.length > 0) {
         setBannerHotels(response.data.data.slice(0, 5));
@@ -142,8 +148,6 @@ function SearchPage() {
       }
     } catch (error) {
       console.error('获取城市Banner失败:', error);
-    } finally {
-      setBannerLoading(false);
     }
   };
 
@@ -317,6 +321,61 @@ function SearchPage() {
   const renderBanner = () => {
     const theme = getSeasonTheme();
     const hasCityRecommend = bannerHotels.length > 0 && bannerCity;
+    if (hasCityRecommend) {
+      return (
+        <div className="banner-container">
+          <Swiper
+            autoplay
+            loop
+            className="banner-swiper"
+            indicator={(total, current) => {
+              const idx = current % bannerHotels.length;
+              return (
+                <div className="banner-indicator">
+                  {bannerHotels.map((_, i) => (
+                    <span key={i} className={`indicator-dot ${i === idx ? 'active' : ''}`} />
+                  ))}
+                </div>
+              );
+            }}
+          >
+            {bannerHotels.map((hotel) => (
+              <Swiper.Item key={hotel.id}>
+                <div
+                  className="banner-item"
+                  onClick={() => handleBannerClick(hotel)}
+                >
+                  <img
+                    className="banner-item-image"
+                    src={(hotel.images && hotel.images[0]) || BANNER_FALLBACK_IMAGE}
+                    alt={hotel.name}
+                    loading="lazy"
+                    onError={(e) => {
+                      if (e.currentTarget.dataset.fallbackApplied) return;
+                      e.currentTarget.dataset.fallbackApplied = '1';
+                      e.currentTarget.src = BANNER_FALLBACK_IMAGE;
+                    }}
+                  />
+                  <div className="banner-overlay">
+                    <div className="banner-content">
+                      <div className="banner-badge">{bannerCity} 今日推荐</div>
+                      <h3 className="banner-title">{hotel.name}</h3>
+                      <p className="banner-location">{hotel.city} · {hotel.address}</p>
+                      <div className="banner-price">
+                        <span className="price-symbol">¥</span>
+                        <span className="price-value">{hotel.price}</span>
+                        <span className="price-unit">起/晚</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </Swiper.Item>
+            ))}
+          </Swiper>
+        </div>
+      );
+    }
+
     return (
       <div className="hero-stack">
         <div
@@ -330,11 +389,6 @@ function SearchPage() {
             <div className="hero-main-copy">
               <h3 className="hero-main-title">{theme.title}</h3>
               <p className="hero-main-sub">{theme.sub}</p>
-              {hasCityRecommend && (
-                <p className="hero-recommend-text">
-                  当前已为你匹配 {bannerCity} 热门酒店 {bannerLoading ? '（更新中）' : ''}
-                </p>
-              )}
               <div className="hero-main-btn">立即探索</div>
             </div>
             <div className="hero-main-badges">
@@ -359,65 +413,8 @@ function SearchPage() {
       {renderBanner()}
 
       <div className="journey-hero story-card">
-        <div className="section-header">
-          <div className="title">旅居灵感</div>
-        </div>
         <div className="journey-copy artistic-center">行程不赶，先给自己一处安稳落脚</div>
       </div>
-
-      {bannerHotels.length > 0 && (
-        <div className="featured-carousel story-card">
-          <div className="section-header">
-            <div className="title">今日推荐</div>
-            <span className="sub">{bannerCity || '精选酒店'}</span>
-          </div>
-          <Swiper
-            autoplay
-            loop
-            className="featured-swiper"
-            indicator={(total, current) => {
-              const idx = current % bannerHotels.length;
-              return (
-                <div className="featured-indicator">
-                  {bannerHotels.map((_, i) => (
-                    <span key={i} className={`featured-dot ${i === idx ? 'active' : ''}`} />
-                  ))}
-                </div>
-              );
-            }}
-          >
-            {bannerHotels.map((hotel) => (
-              <Swiper.Item key={hotel.id}>
-                <div
-                  className="featured-slide"
-                  onClick={() => handleBannerClick(hotel)}
-                  style={{
-                    backgroundImage: hotel.images && hotel.images.length > 0
-                      ? `url(${hotel.images[0]})`
-                      : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-                  }}
-                >
-                  <div className="featured-overlay">
-                    <div className="featured-name">{hotel.name}</div>
-                    <div className="meta-row">
-                      <EnvironmentOutline />
-                      <span>{hotel.city} · {hotel.address}</span>
-                    </div>
-                    <div className="featured-footer">
-                      <div className="price-block">
-                        <span className="currency">¥</span>
-                        <span className="value">{hotel.price}</span>
-                        <span className="unit">起/晚</span>
-                      </div>
-                      <Tag className="featured-tag">{hotel.rating || '4.5'}分口碑</Tag>
-                    </div>
-                  </div>
-                </div>
-              </Swiper.Item>
-            ))}
-          </Swiper>
-        </div>
-      )}
 
       {/* 核心查询区域 */}
       <div className="search-form-container">

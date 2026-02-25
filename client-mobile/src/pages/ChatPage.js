@@ -340,42 +340,40 @@ function ChatPage() {
     }
     if (!content) return <DotLoading color="primary" />;
 
-    const hotelLinkRegex = /\[\[hotel:([^\]|]+)\|([^\]]+)\]\]/g;
-    const parts = [];
-    let lastIndex = 0;
-    let match;
-
-    while ((match = hotelLinkRegex.exec(content)) !== null) {
-      if (match.index > lastIndex) {
-        parts.push({ type: 'text', value: content.slice(lastIndex, match.index) });
-      }
-      parts.push({ type: 'hotel', id: match[1], name: match[2] });
-      lastIndex = match.index + match[0].length;
-    }
-    if (lastIndex < content.length) {
-      parts.push({ type: 'text', value: content.slice(lastIndex) });
-    }
-
-    if (parts.length === 0) {
-      return <div className="msg-text markdown-body"><ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown></div>;
-    }
+    // 将自定义酒店标记替换为 markdown 链接，确保整段 markdown 一次性渲染
+    const normalized = content.replace(/\[\[hotel:([^\]|]+)\|([^\]]+)\]\]/g, (_, id, name) => `[${name}](hotel://${id})`);
 
     return (
       <div className="msg-text markdown-body">
-        {parts.map((part, i) => {
-          if (part.type === 'hotel') {
-            return (
-              <span
-                key={i}
-                className="hotel-link"
-                onClick={() => handleHotelClick(part.id)}
-              >
-                {part.name} →
-              </span>
-            );
-          }
-          return <ReactMarkdown key={i} remarkPlugins={[remarkGfm]}>{part.value}</ReactMarkdown>;
-        })}
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm]}
+          components={{
+            a: ({ href, children }) => {
+              if (href && href.startsWith('hotel://')) {
+                const hotelId = href.replace('hotel://', '').trim();
+                return (
+                  <span
+                    className="hotel-link"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleHotelClick(hotelId)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleHotelClick(hotelId);
+                      }
+                    }}
+                  >
+                    {children} →
+                  </span>
+                );
+              }
+              return <a href={href} target="_blank" rel="noreferrer">{children}</a>;
+            }
+          }}
+        >
+          {normalized}
+        </ReactMarkdown>
       </div>
     );
   };
