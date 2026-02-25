@@ -30,11 +30,8 @@ jobs:
           npm config get include
         env:
           NPM_CONFIG_PRODUCTION: "false"
-          npm_config_production: "false"
           NPM_CONFIG_INCLUDE: "dev"
-          npm_config_include: "dev"
           NPM_CONFIG_OMIT: "optional"
-          npm_config_omit: "optional"
 
       - name: Install mobile deps
         working-directory: client-mobile
@@ -43,22 +40,16 @@ jobs:
           npm ls react-scripts --depth=0
         env:
           NPM_CONFIG_PRODUCTION: "false"
-          npm_config_production: "false"
           NPM_CONFIG_INCLUDE: "dev"
-          npm_config_include: "dev"
           NPM_CONFIG_OMIT: "optional"
-          npm_config_omit: "optional"
 
       - name: Build mobile
         working-directory: client-mobile
         run: CI= npm run build
         env:
           NPM_CONFIG_PRODUCTION: "false"
-          npm_config_production: "false"
           NPM_CONFIG_INCLUDE: "dev"
-          npm_config_include: "dev"
           NPM_CONFIG_OMIT: "optional"
-          npm_config_omit: "optional"
 
   admin-quality:
     runs-on: ubuntu-latest
@@ -83,11 +74,8 @@ jobs:
           npm config get include
         env:
           NPM_CONFIG_PRODUCTION: "false"
-          npm_config_production: "false"
           NPM_CONFIG_INCLUDE: "dev"
-          npm_config_include: "dev"
           NPM_CONFIG_OMIT: "optional"
-          npm_config_omit: "optional"
 
       - name: Install admin deps
         working-directory: admin-pc
@@ -98,30 +86,21 @@ jobs:
           npm ls @types/node --depth=0
         env:
           NPM_CONFIG_PRODUCTION: "false"
-          npm_config_production: "false"
           NPM_CONFIG_INCLUDE: "dev"
-          npm_config_include: "dev"
           NPM_CONFIG_OMIT: "optional"
-          npm_config_omit: "optional"
 
       - name: Typecheck admin
         working-directory: admin-pc
         run: npm run typecheck
         env:
           NPM_CONFIG_PRODUCTION: "false"
-          npm_config_production: "false"
           NPM_CONFIG_INCLUDE: "dev"
-          npm_config_include: "dev"
           NPM_CONFIG_OMIT: "optional"
-          npm_config_omit: "optional"
 
       - name: Build admin
         working-directory: admin-pc
         run: CI= npm run build
         env:
           NPM_CONFIG_PRODUCTION: "false"
-          npm_config_production: "false"
           NPM_CONFIG_INCLUDE: "dev"
-          npm_config_include: "dev"
           NPM_CONFIG_OMIT: "optional"
-          npm_config_omit: "optional"
