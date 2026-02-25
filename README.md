@@ -23,9 +23,10 @@
 EasyStay_Hotel_Booking_kud/
 ├── server/              # 后端服务（Node.js + Express）
 ├── client-mobile/       # 移动端（React + Ant Design Mobile）
-├── admin-pc/           # PC管理端（React + Ant Design）
-├── pm2.config.js       # PM2 统一配置文件
-└── logs/               # 服务日志目录
+├── admin-pc/            # PC 管理端（React + Ant Design）
+├── pm2.config.js        # PM2 统一配置文件
+├── logs/                # 服务日志目录
+└── server/data/         # 数据文件（JSON）
 ```
 
 ## 技术栈
