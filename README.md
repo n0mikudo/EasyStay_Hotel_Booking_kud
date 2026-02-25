@@ -1,5 +1,7 @@
 # 易宿酒店预订平台
 
+[English](./README.EN.md) | 简体中文
+
 一个完整的酒店预订系统，包含移动端用户界面和PC端管理界面。
 
 ## 项目信息
@@ -219,3 +221,7 @@ pm2 delete all
 - **GIT 提交指南**：[GIT_提交指南.md](./GIT_提交指南.md)
 - **Coze AI 智能体搭建指南**：[Coze_Agent_搭建指南.md](./Coze_Agent_搭建指南.md)
 - **Coze AI 设计方案**：[Coze_Agent_设计方案与部署步骤.md](./Coze_Agent_设计方案与部署步骤.md)
+
+## 许可证
+
+本项目采用 [MIT License](./LICENSE)。

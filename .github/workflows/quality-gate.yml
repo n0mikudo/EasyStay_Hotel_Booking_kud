@@ -20,6 +20,11 @@ jobs:
           cache: npm
           cache-dependency-path: client-mobile/package-lock.json
 
+      - name: Pin npm version (mobile)
+        run: |
+          npm install -g npm@10
+          npm --version
+
       - name: Diagnose npm config (mobile)
         working-directory: client-mobile
         run: |
@@ -36,7 +41,7 @@ jobs:
       - name: Install mobile deps
         working-directory: client-mobile
         run: |
-          npm ci --include=dev
+          npm ci --include=dev --prefer-online --no-audit --no-fund || (echo "Retry npm ci for mobile..." && npm cache verify && npm ci --include=dev --prefer-online --no-audit --no-fund)
           npm ls react-scripts --depth=0
         env:
           NPM_CONFIG_PRODUCTION: "false"
@@ -64,6 +69,11 @@ jobs:
           cache: npm
           cache-dependency-path: admin-pc/package-lock.json
 
+      - name: Pin npm version (admin)
+        run: |
+          npm install -g npm@10
+          npm --version
+
       - name: Diagnose npm config (admin)
         working-directory: admin-pc
         run: |
@@ -80,7 +90,7 @@ jobs:
       - name: Install admin deps
         working-directory: admin-pc
         run: |
-          npm ci --include=dev
+          npm ci --include=dev --prefer-online --no-audit --no-fund || (echo "Retry npm ci for admin..." && npm cache verify && npm ci --include=dev --prefer-online --no-audit --no-fund)
           npm ls react-scripts --depth=0
           npm ls typescript --depth=0
           npm ls @types/node --depth=0
