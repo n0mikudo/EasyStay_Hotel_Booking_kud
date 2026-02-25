@@ -83,3 +83,4 @@ server/test-*.js
 
 # Root lockfile is not used as a package
 /package-lock.json
+server/data/image-cache/
