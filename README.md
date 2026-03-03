@@ -26,7 +26,12 @@ EasyStay_Hotel_Booking_kud/
 ├── server/              # 后端服务（Node.js + Express）
 ├── client-mobile/       # 移动端（React + Ant Design Mobile）
 ├── admin-pc/            # PC 管理端（React + Ant Design）
-├── pm2.config.js        # PM2 统一配置文件
+├── docs/                # 项目文档
+├── config/              # 配置文件（nginx.conf, pm2.config.js）
+├── deploy-scripts/      # 部署脚本
+├── test-data/           # 测试数据
+├── assets/              # 静态资源
+├── 答辩准备材料/         # 答辩材料
 ├── logs/                # 服务日志目录
 └── server/data/         # 数据文件（JSON）
 ```
@@ -164,7 +169,7 @@ pm2 delete all
 
 首页与酒店列表的「定位」按钮使用百度地图逆地理编码。**本项目已预配置 AK**，启动后端即可使用。他人克隆需自行申请 AK 并创建 `server/.env`。
 
-详见 [项目手册.md](./项目手册.md) 第四章。
+详见 [docs/项目手册.md](./docs/项目手册.md) 第四章。
 
 ## 开发说明
 
@@ -215,12 +220,26 @@ pm2 delete all
 
 ## 文档
 
-- **项目手册**（部署、自检、答辩、常见问题）：[项目手册.md](./项目手册.md)
-- **部署指南**：[部署指南.md](./部署指南.md)
-- **验证测试指导手册**：[验证测试指导手册.md](./验证测试指导手册.md)
-- **GIT 提交指南**：[GIT_提交指南.md](./GIT_提交指南.md)
-- **Coze AI 智能体搭建指南**：[Coze_Agent_搭建指南.md](./Coze_Agent_搭建指南.md)
-- **Coze AI 设计方案**：[Coze_Agent_设计方案与部署步骤.md](./Coze_Agent_设计方案与部署步骤.md)
+所有文档已移动到 `docs/` 目录：
+
+- **项目手册**（部署、自检、答辩、常见问题）：[docs/项目手册.md](./docs/项目手册.md)
+- **部署指南**：[docs/部署指南.md](./docs/部署指南.md)
+- **验证测试指导手册**：[docs/验证测试指导手册.md](./docs/验证测试指导手册.md)
+- **GIT 提交指南**：[docs/GIT_提交指南.md](./docs/GIT_提交指南.md)
+- **Coze AI 智能体搭建指南**：[docs/Coze_Agent_搭建指南.md](./docs/Coze_Agent_搭建指南.md)
+- **Coze AI 设计方案**：[docs/Coze_Agent_设计方案与部署步骤.md](./docs/Coze_Agent_设计方案与部署步骤.md)
+- **SQLite 双轨数据库指南**：[docs/SQLite_双轨数据库使用与验证指南.md](./docs/SQLite_双轨数据库使用与验证指南.md)
+- **代码质量分析报告**：[docs/代码质量分析报告.md](./docs/代码质量分析报告.md)
+
+### 答辩准备材料
+
+答辩相关材料位于 `答辩准备材料/` 目录：
+
+- **项目讲解参考资料**：[答辩准备材料/文档/01_项目讲解参考资料.md](./答辩准备材料/文档/01_项目讲解参考资料.md)
+- **后端API设计文档**：[答辩准备材料/设计文档/01_后端API设计文档.md](./答辩准备材料/设计文档/01_后端API设计文档.md)
+- **数据处理设计文档**：[答辩准备材料/设计文档/02_数据处理设计文档.md](./答辩准备材料/设计文档/02_数据处理设计文档.md)
+- **AI Chatbot设计文档**：[答辩准备材料/设计文档/03_AI_Chatbot设计文档.md](./答辩准备材料/设计文档/03_AI_Chatbot设计文档.md)
+- **答辩问答速查**：[答辩准备材料/答辩问答/答辩问答速查.md](./答辩准备材料/答辩问答/答辩问答速查.md)
 
 ## 许可证
 

@@ -329,6 +329,39 @@ function ChatPage() {
     navigate(`/hotels/${hotelId}`);
   };
 
+  const parseHotelTags = (content) => {
+    const parts = [];
+    const regex = /\[\[hotel:([^\]|]+)\|([^\]]+)\]\]/g;
+    let lastIndex = 0;
+    let match;
+
+    while ((match = regex.exec(content)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push({
+          type: 'text',
+          content: content.slice(lastIndex, match.index)
+        });
+      }
+      
+      parts.push({
+        type: 'hotel',
+        id: match[1].trim(),
+        name: match[2].trim()
+      });
+      
+      lastIndex = match.index + match[0].length;
+    }
+
+    if (lastIndex < content.length) {
+      parts.push({
+        type: 'text',
+        content: content.slice(lastIndex)
+      });
+    }
+
+    return parts.length > 0 ? parts : [{ type: 'text', content }];
+  };
+
   const renderContent = (content, waitText) => {
     if (!content && waitText) {
       return (
@@ -340,40 +373,52 @@ function ChatPage() {
     }
     if (!content) return <DotLoading color="primary" />;
 
-    // 将自定义酒店标记替换为 markdown 链接，确保整段 markdown 一次性渲染
-    const normalized = content.replace(/\[\[hotel:([^\]|]+)\|([^\]]+)\]\]/g, (_, id, name) => `[${name}](hotel://${id})`);
+    const parts = parseHotelTags(content);
 
     return (
       <div className="msg-text markdown-body">
-        <ReactMarkdown
-          remarkPlugins={[remarkGfm]}
-          components={{
-            a: ({ href, children }) => {
-              if (href && href.startsWith('hotel://')) {
-                const hotelId = href.replace('hotel://', '').trim();
-                return (
-                  <span
-                    className="hotel-link"
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => handleHotelClick(hotelId)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        handleHotelClick(hotelId);
-                      }
-                    }}
+        {parts.map((part, idx) => {
+          if (part.type === 'hotel') {
+            return (
+              <span
+                key={idx}
+                className="hotel-link"
+                role="button"
+                tabIndex={0}
+                onClick={() => handleHotelClick(part.id)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleHotelClick(part.id);
+                  }
+                }}
+              >
+                {part.name} →
+              </span>
+            );
+          }
+          
+          return (
+            <ReactMarkdown
+              key={idx}
+              remarkPlugins={[remarkGfm]}
+              components={{
+                a: ({ href, children }) => (
+                  <a 
+                    href={href} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    {children} →
-                  </span>
-                );
-              }
-              return <a href={href} target="_blank" rel="noreferrer">{children}</a>;
-            }
-          }}
-        >
-          {normalized}
-        </ReactMarkdown>
+                    {children}
+                  </a>
+                )
+              }}
+            >
+              {part.content}
+            </ReactMarkdown>
+          );
+        })}
       </div>
     );
   };

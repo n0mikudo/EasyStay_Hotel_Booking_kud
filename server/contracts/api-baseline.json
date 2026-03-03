@@ -1,0 +1,26 @@
+{
+  "version": "2026-02-dual-track-baseline",
+  "notes": "用于结营演示的核心接口契约快照，迁移数据库期间保持接口不变。",
+  "demoFlow": [
+    "POST /api/auth/login (admin|merchant)",
+    "GET /api/hotels?status=approved&page=1&pageSize=10",
+    "GET /api/hotels/:id",
+    "POST /api/bookings",
+    "GET /api/bookings",
+    "PUT /api/hotels/:id/status",
+    "GET /api/health"
+  ],
+  "entities": [
+    "hotels",
+    "users",
+    "bookings",
+    "messages",
+    "clientUsers",
+    "chatSessions"
+  ],
+  "compatibilityRules": [
+    "前端请求路径与参数保持不变",
+    "分页/排序/筛选行为保持不变",
+    "审核与预订核心链路保持可用"
+  ]
+}
